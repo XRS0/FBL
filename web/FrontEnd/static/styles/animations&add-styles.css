@@ -1,0 +1,104 @@
+.header-title,
+.small-welcome-text,
+.main-welcome-text,
+.container {
+    user-select: none;
+}
+
+body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+p {
+    user-select: auto;
+}
+
+img {
+    pointer-events: none;
+}
+
+.back-paygr,
+.header-title {
+    pointer-events: none;
+}
+
+.navigation-bar div, .navigation-bar img {
+    cursor: pointer;
+    user-select: none;
+}
+
+.fillness-button {
+    background: linear-gradient(to right, var(--main-blue) 50%, rgba(0, 0, 0, 0) 50%);
+    background-size: 200% 100%;
+    background-position: bottom right;
+    transition: background-position 350ms ease;
+
+    cursor: pointer;
+    user-select: none;
+}
+
+.fillness-button:hover {
+	background-position: top left;
+    color: #fff;
+}
+
+.match-widget,
+.team-widget,
+.player-card {
+    transition: border 200ms ease;
+    cursor: pointer;
+}
+
+.match-widget:hover {
+    border: 1px solid var(--main-blue);
+}
+
+.team-widget {
+    user-select: none;
+    cursor: auto;
+}
+
+.team-widget:hover {
+    border: 1px solid var(--main-blue);
+}
+
+.player-card:hover {
+    border: 1px solid var(--main-blue);
+}
+
+.change-border {
+    background: linear-gradient(to right, var(--main-blue) 50%, rgba(0, 0, 0, 0) 50%);
+    background-size: 200% 100%;
+    background-position: bottom right;
+    transition: background-position 350ms ease;
+}
+
+.change-border:hover {
+    background-position: bottom left;
+}
+
+.social-tg {
+    width: 70px;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    justify-content: center;
+
+    border-radius: 50%;
+    border: 1px solid var(--main-blue);
+    background: linear-gradient(to top, var(--main-blue) 50%, rgba(0, 0, 0, 0) 50%);
+    background-size: 100% 200%;
+    background-position: top;
+    transition: background-position 300ms ease;
+
+    cursor: pointer;
+    user-select: none;
+}
+
+.social-tg:hover {
+    background-position: bottom;
+}
+
+.social-tg img {
+    width: 60%;
+    margin-right: 6%;
+}

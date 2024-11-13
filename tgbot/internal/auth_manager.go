@@ -3,41 +3,49 @@ package internal
 
 import (
 	"sync"
-	Models "tgbot/pkg"
+	. "tgbot/pkg"
 )
 
 type AuthManager struct {
-	players map[int64]*Models.Player
-	mu      sync.RWMutex
+	players map[int64]*Player
+	mu      sync.Mutex
 }
 
 func NewAuthManager() *AuthManager {
-	return &AuthManager{
-		players: make(map[int64]*Models.Player),
-	}
+	return &AuthManager{players: make(map[int64]*Player)}
 }
 
-func (am *AuthManager) RegisterUser(telegramID int64, name string) bool {
+// RegisterUser добавляет нового пользователя с паролем
+func (am *AuthManager) RegisterUser(telegramID int64, name, password string) *Player {
 	am.mu.Lock()
 	defer am.mu.Unlock()
 
-	if _, exists := am.players[telegramID]; !exists {
-		am.players[telegramID] = &Models.Player{Name: name, TelegramID: telegramID}
-		return true
-	}
-	return false
+	player := NewPlayer(name, telegramID, password)
+	am.players[telegramID] = player
+	return player
 }
 
-func (am *AuthManager) GetPlayer(telegramID int64) *Models.Player {
-	am.mu.RLock()
-	defer am.mu.RUnlock()
+// Authenticate проверяет, зарегистрирован ли пользователь и совпадает ли пароль
+func (am *AuthManager) Authenticate(telegramID int64, name, password string) bool {
+	am.mu.Lock()
+	defer am.mu.Unlock()
+
+	player, exists := am.players[telegramID]
+	return exists && player.Password == password
+}
+
+// GetPlayer возвращает игрока по его Telegram ID
+func (am *AuthManager) GetPlayer(telegramID int64) *Player {
+	am.mu.Lock()
+	defer am.mu.Unlock()
 
 	return am.players[telegramID]
 }
 
-func (am *AuthManager) Authenticate(telegramID int64) bool {
-	am.mu.RLock()
-	defer am.mu.RUnlock()
+// IsRegistered проверяет, зарегистрирован ли пользователь
+func (am *AuthManager) IsRegistered(telegramID int64) bool {
+	am.mu.Lock()
+	defer am.mu.Unlock()
 
 	_, exists := am.players[telegramID]
 	return exists

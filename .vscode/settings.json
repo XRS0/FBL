@@ -75,5 +75,6 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/misix/Desktop/FBL/tgbot/cppbot"
 }

@@ -1,3 +1,0 @@
-/home/misix/Desktop/FBL/tgbot/tmp/CMakeFiles/main.dir
-/home/misix/Desktop/FBL/tgbot/tmp/CMakeFiles/edit_cache.dir
-/home/misix/Desktop/FBL/tgbot/tmp/CMakeFiles/rebuild_cache.dir

@@ -1,1 +1,0 @@
-/usr/bin/c++  -Wall CMakeFiles/main.dir/main.cpp.o CMakeFiles/main.dir/models.cpp.o CMakeFiles/main.dir/auth_manager.cpp.o CMakeFiles/main.dir/tg_bot.cpp.o -o main  /usr/local/lib/libTgBot.a /usr/lib/x86_64-linux-gnu/libssl.so /usr/lib/x86_64-linux-gnu/libcrypto.so /usr/lib/x86_64-linux-gnu/libboost_system.so.1.83.0 /usr/lib/x86_64-linux-gnu/libcurl.so 

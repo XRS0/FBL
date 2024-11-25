@@ -7,6 +7,7 @@ type Team struct {
 	Name      string `gorm:"not null"`
 	OwnerID   uint   // ID владельца команды (ссылается на Player)
 	Owner     Player
+	Players   []Player
 	IsActive  bool `gorm:"default:true"`
 	CreatedAt time.Time
 	UpdatedAt time.Time

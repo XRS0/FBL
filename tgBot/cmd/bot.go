@@ -1,10 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
+	"time"
 
 	"basketball-league/internal/models"
 
@@ -91,6 +93,8 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		createTeam(bot, chatID, int(userID))
 	case "/logout":
 		logout(bot, chatID, userID)
+	case "/statistics":
+		viewStatistics(bot, chatID, userID)
 	default:
 		if strings.HasPrefix(msg.Text, "/join_team") {
 			joinTeam(bot, chatID, msg.Text)
@@ -106,16 +110,23 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 
 // Отправка приветственного сообщения
 func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
-	message := "Добро пожаловать! Вот список доступных команд:\n" +
-		"/profile - Просмотреть свой профиль\n" +
-		"/register - Зарегистрироваться как игрок\n" +
-		"/teams - Просмотреть команды и вступить\n" +
-		"/matches - Просмотреть матчи\n" +
-		"/create_team - Создать свою команду\n" +
-		"/join_team - Вступить в команду\n" +
-		"/join_match - Записаться на матч" +
-		"/logout - Выйти из аккаунта"
-	bot.Send(tgbotapi.NewMessage(chatID, message))
+	message := "*Добро пожаловать!*\n\n" +
+		"Вот список доступных команд:\n" +
+		"- `/profile` - Просмотреть свой профиль\n" +
+		"- `/register` - Зарегистрироваться как игрок\n" +
+		"- `/teams` - Просмотреть команды и вступить\n" +
+		"- `/matches` - Просмотреть матчи\n" +
+		"- `/create_team` - Создать свою команду\n" +
+		"- `/join_team` - Вступить в команду\n" +
+		"- `/join_match` - Записаться на матч\n" +
+		"- `/statistics` - Просмотреть статистику матчей\n" +
+		"- `/help` - Получить справку по командам\n" +
+		"- `/logout` - Выйти из аккаунта\n\n" +
+		"_Выберите команду и начните взаимодействовать с ботом._"
+
+	msg := tgbotapi.NewMessage(chatID, message)
+	msg.ParseMode = "Markdown"
+	bot.Send(msg)
 }
 
 func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
@@ -134,6 +145,7 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	if err == nil {
 		// Если игрок найден в базе данных, сообщаем о том, что он уже зарегистрирован
 		bot.Send(tgbotapi.NewMessage(chatID, "Вы уже зарегистрированы в системе!"))
+		userStates[userID] = ""
 		return
 	}
 
@@ -430,4 +442,151 @@ func createTeam(bot *tgbotapi.BotAPI, chatID int64, userID int) {
 	}
 
 	userStates[int64(userID)] = "create_team_name"
+}
+
+func viewStatistics(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
+	var player models.Player
+	err := DB.Where("chat_id = ?", chatID).Preload("Team").First(&player).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
+		return
+	}
+
+	var stats []models.MatchStatistics
+	err = DB.Where("player_id = ?", player.ID).Find(&stats).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при получении статистики. Попробуйте позже."))
+		log.Printf("Ошибка получения статистики: %v", err)
+		return
+	}
+
+	totalPoints, totalAssists, totalRebounds := 0, 0, 0
+	for _, stat := range stats {
+		totalPoints += stat.Points
+		totalAssists += stat.Assists
+		totalRebounds += stat.Rebounds
+	}
+
+	message := fmt.Sprintf("Статистика игрока %s:\nОчки: %d\nПередачи: %d\nПодборы: %d",
+		player.Name, totalPoints, totalAssists, totalRebounds)
+
+	if player.Team != nil {
+		message += fmt.Sprintf("\nКоманда: %s", player.Team.Name)
+	}
+
+	bot.Send(tgbotapi.NewMessage(chatID, message))
+}
+
+func updateProfile(bot *tgbotapi.BotAPI, chatID int64, msg *tgbotapi.Message, userID int64) {
+	var player models.Player
+	err := DB.Where("chat_id = ?", chatID).First(&player).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
+		return
+	}
+
+	userStates[userID] = "update_profile"
+	bot.Send(tgbotapi.NewMessage(chatID, "Введите новые данные профиля в формате:\nРост (см), Вес (кг), Позиция"))
+}
+
+func processUpdateProfile(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, userID int64) {
+	input := strings.Split(msg.Text, ",")
+	if len(input) != 3 {
+		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Неверный формат. Попробуйте снова: Рост (см), Вес (кг), Позиция"))
+		return
+	}
+
+	height, err1 := strconv.Atoi(strings.TrimSpace(input[0]))
+	weight, err2 := strconv.Atoi(strings.TrimSpace(input[1]))
+	position := strings.TrimSpace(input[2])
+
+	if err1 != nil || err2 != nil || len(position) < 3 {
+		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Неверные данные. Убедитесь, что указаны корректные значения."))
+		return
+	}
+
+	var player models.Player
+	err := DB.Where("chat_id = ?", msg.Chat.ID).First(&player).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Ошибка: Профиль не найден."))
+		return
+	}
+
+	player.Height = height
+	player.Weight = weight
+	player.Position = position
+
+	DB.Save(&player)
+	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Профиль обновлен!"))
+}
+
+func GetTeamByID(db *gorm.DB, teamID int) (*models.Team, error) {
+	var team models.Team
+	err := db.Preload("Players").First(&team, teamID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("команда с таким ID не найдена")
+	} else if err != nil {
+		return nil, err
+	}
+	return &team, nil
+}
+
+func CreateMatch(db *gorm.DB, team1ID, team2ID uint, date time.Time, location string) (*models.Match, error) {
+	if team1ID == team2ID {
+		return nil, errors.New("команды не могут быть одинаковыми")
+	}
+
+	match := models.Match{
+		Team1ID:  team1ID,
+		Team2ID:  team2ID,
+		Date:     date,
+		Location: location,
+	}
+
+	err := db.Create(&match).Error
+	if err != nil {
+		return nil, err
+	}
+	return &match, nil
+}
+
+// UpdateMatch обновляет информацию о матче
+func UpdateMatch(db *gorm.DB, matchID int, team1ID, team2ID uint, date time.Time, location string) error {
+	var match models.Match
+	err := db.First(&match, matchID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.New("матч не найден")
+	} else if err != nil {
+		return err
+	}
+
+	// Обновление данных
+	match.Team1ID = team1ID
+	match.Team2ID = team2ID
+	match.Date = date
+	match.Location = location
+
+	return db.Save(&match).Error
+}
+
+// GetMatchByID получает матч по его ID
+func GetMatchByID(db *gorm.DB, matchID int) (*models.Match, error) {
+	var match models.Match
+	err := db.Preload("Team1.Players").Preload("Team2.Players").First(&match, matchID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("матч не найден")
+	} else if err != nil {
+		return nil, err
+	}
+	return &match, nil
+}
+
+// GetAllMatches получает список всех матчей
+func GetAllMatches(db *gorm.DB) ([]models.Match, error) {
+	var matches []models.Match
+	err := db.Preload("Team1").Preload("Team2").Find(&matches).Error
+	if err != nil {
+		return nil, err
+	}
+	return matches, nil
 }

@@ -1,0 +1,11 @@
+CREATE TABLE players (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    height INTEGER NOT NULL,
+    weight INTEGER NOT NULL,
+    position VARCHAR(50) NOT NULL,
+    chat_id BIGINT UNIQUE NOT NULL,  -- Telegram ID игрока
+    contact VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

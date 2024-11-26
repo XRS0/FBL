@@ -80,7 +80,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		sendStartMessage(bot, chatID)
 	case "/register":
 		userStates[userID] = "register"
-		bot.Send(tgbotapi.NewMessage(chatID, "Введите свои данные в формате: Имя, Рост (см), Вес (кг), Позиция, Контакт"))
+		registerPlayer(bot, msg)
 	case "/profile":
 		listProfile(bot, chatID)
 	case "/teams":
@@ -89,11 +89,15 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		listMatches(bot, chatID)
 	case "/create_team":
 		createTeam(bot, chatID, int(userID))
+	case "/logout":
+		logout(bot, chatID, userID)
 	default:
 		if strings.HasPrefix(msg.Text, "/join_team") {
 			joinTeam(bot, chatID, msg.Text)
 		} else if strings.HasPrefix(msg.Text, "/join_match") {
 			joinMatch(bot, chatID, msg.Text)
+		} else if strings.HasPrefix(userStates[userID], "register") {
+			registerPlayer(bot, msg)
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /start."))
 		}
@@ -109,50 +113,149 @@ func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
 		"/matches - Просмотреть матчи\n" +
 		"/create_team - Создать свою команду\n" +
 		"/join_team - Вступить в команду\n" +
-		"/join_match - Записаться на матч"
+		"/join_match - Записаться на матч" +
+		"/logout - Выйти из аккаунта"
 	bot.Send(tgbotapi.NewMessage(chatID, message))
 }
 
-// Регистрация игрока
 func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
-	data := strings.Split(msg.Text, ",")
-	if len(data) != 5 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Неправильный формат. Используйте формат: Имя, Рост (см), Вес (кг), Позиция, Контакт"))
+	// Инициализация данных пользователя, если ранее не была начата регистрация
+	if _, exists := userStates[userID]; !exists {
+		userStates[userID] = "register_name"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваше имя:"))
 		return
 	}
 
-	height, err := strconv.Atoi(strings.TrimSpace(data[1]))
+	var existingPlayer models.Player
+	err := DB.Where("chat_id = ?", chatID).First(&existingPlayer).Error
+	if err == nil {
+		// Если игрок найден в базе данных, сообщаем о том, что он уже зарегистрирован
+		bot.Send(tgbotapi.NewMessage(chatID, "Вы уже зарегистрированы в системе!"))
+		return
+	}
+
+	// Состояние регистрации
+	state := userStates[userID]
+	switch state {
+	case "register_name":
+		if len(msg.Text) < 2 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Имя должно быть длиннее 1 символа. Попробуйте снова."))
+			return
+		}
+		setTemporaryData(userID, "name", msg.Text)
+		userStates[userID] = "register_height"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш рост (см):"))
+
+	case "register_height":
+		height, err := strconv.Atoi(strings.TrimSpace(msg.Text))
+		if err != nil || height < 100 || height > 250 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Укажите корректный рост в сантиметрах (от 100 до 250)."))
+			return
+		}
+		setTemporaryData(userID, "height", strconv.Itoa(height))
+		userStates[userID] = "register_weight"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш вес (кг):"))
+
+	case "register_weight":
+		weight, err := strconv.Atoi(strings.TrimSpace(msg.Text))
+		if err != nil || weight < 30 || weight > 200 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Укажите корректный вес в килограммах (от 30 до 200)."))
+			return
+		}
+		setTemporaryData(userID, "weight", strconv.Itoa(weight))
+		userStates[userID] = "register_position"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите вашу игровую позицию (например, Центровой, Разыгрывающий):"))
+
+	case "register_position":
+		if len(msg.Text) < 3 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Позиция должна содержать хотя бы 3 символа. Попробуйте снова."))
+			return
+		}
+		setTemporaryData(userID, "position", msg.Text)
+		userStates[userID] = "register_contact"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш контакт (например, номер телефона или email):"))
+
+	case "register_contact":
+		if len(msg.Text) < 5 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Контактная информация должна содержать хотя бы 5 символов. Попробуйте снова."))
+			return
+		}
+		setTemporaryData(userID, "contact", msg.Text)
+
+		// Создание игрока в базе данных
+		tempData := getTemporaryData(userID)
+		height, _ := strconv.Atoi(tempData["height"])
+		weight, _ := strconv.Atoi(tempData["weight"])
+
+		player := models.Player{
+			Name:     tempData["name"],
+			Height:   height,
+			Weight:   weight,
+			Position: tempData["position"],
+			Contact:  tempData["contact"],
+			ChatID:   chatID,
+		}
+
+		err := DB.Create(&player).Error
+		if err != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при регистрации. Попробуйте снова."))
+			log.Printf("Ошибка при регистрации игрока: %v", err)
+			return
+		}
+
+		// Сброс состояния пользователя
+		deleteTemporaryData(userID)
+		delete(userStates, userID)
+
+		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок %s успешно зарегистрирован!", player.Name)))
+	default:
+		userStates[userID] = "register_name"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваше имя:"))
+	}
+}
+
+// Хранилище временных данных для пользователя
+var temporaryData = make(map[int64]map[string]string)
+
+// Установка временных данных
+func setTemporaryData(userID int64, key, value string) {
+	if _, exists := temporaryData[userID]; !exists {
+		temporaryData[userID] = make(map[string]string)
+	}
+	temporaryData[userID][key] = value
+}
+
+// Получение временных данных
+func getTemporaryData(userID int64) map[string]string {
+	if data, exists := temporaryData[userID]; exists {
+		return data
+	}
+	return make(map[string]string)
+}
+
+// Удаление временных данных
+func deleteTemporaryData(userID int64) {
+	delete(temporaryData, userID)
+}
+
+// Выход из аккаунта
+func logout(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
+	// Удаление игрока из базы данных
+	err := DB.Where("chat_id = ?", chatID).Delete(&models.Player{}).Error
 	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Некорректный рост. Укажите число."))
+		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при выходе из аккаунта. Попробуйте снова."))
+		log.Printf("Ошибка при удалении аккаунта: %v", err)
 		return
 	}
 
-	weight, err := strconv.Atoi(strings.TrimSpace(data[2]))
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Некорректный вес. Укажите число."))
-		return
-	}
+	// Очистка временных данных и состояния пользователя
+	delete(userStates, userID)
+	deleteTemporaryData(userID)
 
-	player := models.Player{
-		Name:     strings.TrimSpace(data[0]),
-		Height:   height,
-		Weight:   weight,
-		Position: strings.TrimSpace(data[3]),
-		Contact:  strings.TrimSpace(data[4]),
-		ChatID:   chatID,
-	}
-
-	err = DB.Create(&player).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при регистрации. Попробуйте снова."))
-		log.Printf("Ошибка при регистрации игрока: %v", err)
-		return
-	}
-	userStates[userID] = ""
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок %s успешно зарегистрирован!", player.Name)))
+	bot.Send(tgbotapi.NewMessage(chatID, "Вы успешно вышли из аккаунта. Для повторной регистрации используйте команду /register."))
 }
 
 // Просмотр профиля

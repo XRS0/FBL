@@ -1,41 +1,27 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
-	"time"
 
 	"basketball-league/internal/models"
+	. "basketball-league/internal/repositories"
+	. "basketball-league/internal/teamHandlers"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
-var userStates = make(map[int64]string) // Хранение состояния пользователей
+var userStates = make(map[int64]string)
 
 // Инициализация базы данных
-func initDatabase() {
-	dsn := "host=localhost user=admin password=password dbname=basketball_league port=5432 sslmode=disable TimeZone=UTC"
-	var err error
-	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
-	}
-
-	err = DB.AutoMigrate(&models.Team{}, &models.Player{}, &models.Match{}, &models.MatchStatistics{})
-	if err != nil {
-		log.Fatalf("Ошибка миграции базы данных: %v", err)
-	}
-}
 
 // Главная функция
 func main() {
-	initDatabase()
+	DB = InitDatabase()
 
 	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
 	if err != nil {
@@ -57,19 +43,17 @@ func main() {
 	}
 }
 
-// Обработка сообщений
 func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
-	// Получение текущего состояния пользователя
 	state := userStates[userID]
 
 	switch state {
 	case "register":
-		registerPlayer(bot, msg)
+		registerPlayer(bot, msg, DB)
 	case "create_team_name":
-		createTeamName(bot, chatID, msg, int(userID))
+		CreateTeamName(bot, chatID, msg, int(userID), userStates, DB)
 	default:
 		processCommand(bot, msg, chatID, userID)
 	}
@@ -77,31 +61,41 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 
 // Обработка команд
 func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, userID int64) {
-	switch msg.Text {
+	commandParts := strings.SplitN(msg.Text, " ", 2)
+	command := commandParts[0]
+
+	switch command {
 	case "/start":
 		sendStartMessage(bot, chatID)
 	case "/register":
 		userStates[userID] = "register"
-		registerPlayer(bot, msg)
+		registerPlayer(bot, msg, DB)
 	case "/profile":
-		listProfile(bot, chatID)
+		listProfile(bot, chatID, DB)
 	case "/teams":
-		listTeams(bot, chatID)
+		ListTeams(bot, chatID, DB)
 	case "/matches":
 		listMatches(bot, chatID)
 	case "/create_team":
-		createTeam(bot, chatID, int(userID))
+		CreateTeam(bot, chatID, int(userID), userStates, DB)
 	case "/logout":
 		logout(bot, chatID, userID)
 	case "/statistics":
 		viewStatistics(bot, chatID, userID)
+	case "/players":
+		if len(commandParts) < 2 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ"))
+		} else {
+			teamName := strings.TrimSpace(commandParts[1])
+			ListPlayersByTeam(bot, chatID, teamName, DB)
+		}
 	default:
 		if strings.HasPrefix(msg.Text, "/join_team") {
-			joinTeam(bot, chatID, msg.Text)
+			JoinTeam(bot, chatID, msg.Text, DB)
 		} else if strings.HasPrefix(msg.Text, "/join_match") {
 			joinMatch(bot, chatID, msg.Text)
 		} else if strings.HasPrefix(userStates[userID], "register") {
-			registerPlayer(bot, msg)
+			registerPlayer(bot, msg, DB)
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /start."))
 		}
@@ -129,7 +123,7 @@ func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
 	bot.Send(msg)
 }
 
-func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
+func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
@@ -271,7 +265,7 @@ func logout(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 }
 
 // Просмотр профиля
-func listProfile(bot *tgbotapi.BotAPI, chatID int64) {
+func listProfile(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
 	var player models.Player
 
 	err := DB.Where("chat_id = ?", chatID).First(&player).Error
@@ -282,28 +276,6 @@ func listProfile(bot *tgbotapi.BotAPI, chatID int64) {
 
 	message := fmt.Sprintf("Имя: %s\nРост: %d см\nВес: %d кг\nПозиция: %s\nКонтакты: %s",
 		player.Name, player.Height, player.Weight, player.Position, player.Contact)
-	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
-
-// Просмотр списка команд
-func listTeams(bot *tgbotapi.BotAPI, chatID int64) {
-	var teams []models.Team
-
-	err := DB.Where("is_active = ?", true).Find(&teams).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Не удалось получить список команд. Попробуйте позже."))
-		return
-	}
-
-	if len(teams) == 0 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Доступных команд нет."))
-		return
-	}
-
-	message := "Список команд:\n"
-	for _, team := range teams {
-		message += fmt.Sprintf("- %s (Владелец: %s)\n", team.Name, team.Owner.Name)
-	}
 	bot.Send(tgbotapi.NewMessage(chatID, message))
 }
 
@@ -327,73 +299,6 @@ func listMatches(bot *tgbotapi.BotAPI, chatID int64) {
 		message += fmt.Sprintf("- Матч #%d: %s vs %s (%s)\n", match.ID, match.Team1ID, match.Team2ID, match.Location)
 	}
 	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
-
-func createTeamName(bot *tgbotapi.BotAPI, chatID int64, msg *tgbotapi.Message, userID int) {
-	teamName := strings.TrimSpace(msg.Text)
-
-	// Проверка, существует ли уже команда с таким названием
-	var existingTeam models.Team
-	err := DB.Where("name = ?", teamName).First(&existingTeam).Error
-	if err == nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Команда с таким названием уже существует. Попробуйте другое."))
-		return
-	}
-
-	// Создание команды
-	var owner models.Player
-	if err := DB.Where("chat_id = ?", chatID).First(&owner).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
-		return
-	}
-
-	team := models.Team{
-		Name:     teamName,
-		OwnerID:  owner.ID,
-		IsActive: true,
-	}
-
-	if err := DB.Create(&team).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка создания команды. Попробуйте позже."))
-		return
-	}
-
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Команда '%s' успешно создана!", team.Name)))
-	userStates[int64(userID)] = ""
-}
-
-// Вступление в команду
-func joinTeam(bot *tgbotapi.BotAPI, chatID int64, text string) {
-	parts := strings.Split(text, " ")
-	if len(parts) != 2 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_team ID_команды"))
-		return
-	}
-	teamID, err := strconv.Atoi(parts[1])
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "ID команды должно быть числом."))
-		return
-	}
-
-	var team models.Team
-	if err := DB.First(&team, teamID).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Команда не найдена. Проверьте ID команды."))
-		return
-	}
-
-	var player models.Player
-	if err := DB.Where("chat_id = ?", chatID).First(&player).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
-		return
-	}
-
-	team.Players = append(team.Players, player)
-	if err := DB.Save(&team).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка вступления в команду. Попробуйте позже."))
-		return
-	}
-
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Вы успешно вступили в команду '%s'!", team.Name)))
 }
 
 // Запись на матч
@@ -430,18 +335,6 @@ func joinMatch(bot *tgbotapi.BotAPI, chatID int64, text string) {
 	// }
 
 	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Вы успешно записались на матч #%d!", match.ID)))
-}
-
-// Функция для создания команды
-func createTeam(bot *tgbotapi.BotAPI, chatID int64, userID int) {
-
-	var owner models.Player
-	if err := DB.Where("chat_id = ?", chatID).First(&owner).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
-		return
-	}
-
-	userStates[int64(userID)] = "create_team_name"
 }
 
 func viewStatistics(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
@@ -518,75 +411,4 @@ func processUpdateProfile(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, userID in
 
 	DB.Save(&player)
 	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Профиль обновлен!"))
-}
-
-func GetTeamByID(db *gorm.DB, teamID int) (*models.Team, error) {
-	var team models.Team
-	err := db.Preload("Players").First(&team, teamID).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("команда с таким ID не найдена")
-	} else if err != nil {
-		return nil, err
-	}
-	return &team, nil
-}
-
-func CreateMatch(db *gorm.DB, team1ID, team2ID uint, date time.Time, location string) (*models.Match, error) {
-	if team1ID == team2ID {
-		return nil, errors.New("команды не могут быть одинаковыми")
-	}
-
-	match := models.Match{
-		Team1ID:  team1ID,
-		Team2ID:  team2ID,
-		Date:     date,
-		Location: location,
-	}
-
-	err := db.Create(&match).Error
-	if err != nil {
-		return nil, err
-	}
-	return &match, nil
-}
-
-// UpdateMatch обновляет информацию о матче
-func UpdateMatch(db *gorm.DB, matchID int, team1ID, team2ID uint, date time.Time, location string) error {
-	var match models.Match
-	err := db.First(&match, matchID).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return errors.New("матч не найден")
-	} else if err != nil {
-		return err
-	}
-
-	// Обновление данных
-	match.Team1ID = team1ID
-	match.Team2ID = team2ID
-	match.Date = date
-	match.Location = location
-
-	return db.Save(&match).Error
-}
-
-// GetMatchByID получает матч по его ID
-func GetMatchByID(db *gorm.DB, matchID int) (*models.Match, error) {
-	var match models.Match
-	err := db.Preload("Team1.Players").Preload("Team2.Players").First(&match, matchID).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("матч не найден")
-	} else if err != nil {
-		return nil, err
-	}
-	return &match, nil
-}
-
-// GetAllMatches получает список всех матчей
-func GetAllMatches(db *gorm.DB) ([]models.Match, error) {
-	var matches []models.Match
-	err := db.Preload("Team1").Preload("Team2").Find(&matches).Error
-	if err != nil {
-		return nil, err
-	}
-	return matches, nil
 }

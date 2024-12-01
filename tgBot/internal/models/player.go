@@ -33,8 +33,8 @@ type Player struct {
 	Position  string `gorm:"not null"`
 	ChatID    int64  `gorm:"unique;not null"` // Telegram ID игрока
 	Contact   string
-	TeamID    *int  `gorm:"index"`                                          // Внешний ключ (может быть NULL)
-	Team      *Team `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"` // Связь "belongs-to"
+	TeamID    *int  `gorm:"index"`                                          // ID команды (внешний ключ)
+	Team      *Team `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"` // Связь belongs-to
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

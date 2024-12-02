@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	. "basketball-league/internal/db"
 	"basketball-league/internal/models"
-	. "basketball-league/internal/repositories"
 	. "basketball-league/internal/teamHandlers"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -17,9 +17,6 @@ import (
 var DB *gorm.DB
 var userStates = make(map[int64]string)
 
-// Инициализация базы данных
-
-// Главная функция
 func main() {
 	DB = InitDatabase()
 
@@ -109,12 +106,13 @@ func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
 		"- `/profile` - Просмотреть свой профиль\n" +
 		"- `/register` - Зарегистрироваться как игрок\n" +
 		"- `/teams` - Просмотреть команды и вступить\n" +
+		"- `/players` - Просмотреть игроков определенной команды\n" +
 		"- `/matches` - Просмотреть матчи\n" +
 		"- `/create_team` - Создать свою команду\n" +
 		"- `/join_team` - Вступить в команду\n" +
 		"- `/join_match` - Записаться на матч\n" +
 		"- `/statistics` - Просмотреть статистику матчей\n" +
-		"- `/help` - Получить справку по командам\n" +
+		"- `/start` - Получить справку по командам\n" +
 		"- `/logout` - Выйти из аккаунта\n\n" +
 		"_Выберите команду и начните взаимодействовать с ботом._"
 

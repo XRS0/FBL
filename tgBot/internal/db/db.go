@@ -1,4 +1,4 @@
-package repositories
+package db
 
 import (
 	"basketball-league/internal/models"

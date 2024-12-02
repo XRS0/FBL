@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	. "basketball-league/internal/WSH"
 	. "basketball-league/internal/db"
+	. "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
 	. "basketball-league/internal/teamHandlers"
 
@@ -19,6 +21,7 @@ var userStates = make(map[int64]string)
 
 func main() {
 	DB = InitDatabase()
+	go StartWebServer()
 
 	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
 	if err != nil {
@@ -72,13 +75,13 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 	case "/teams":
 		ListTeams(bot, chatID, DB)
 	case "/matches":
-		listMatches(bot, chatID)
+		ListMatches(bot, chatID, DB)
 	case "/create_team":
 		CreateTeam(bot, chatID, int(userID), userStates, DB)
 	case "/logout":
 		logout(bot, chatID, userID)
-	case "/statistics":
-		viewStatistics(bot, chatID, userID)
+	// case "/statistics":
+	// viewStatistics(bot, chatID)
 	case "/players":
 		if len(commandParts) < 2 {
 			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ"))
@@ -90,7 +93,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		if strings.HasPrefix(msg.Text, "/join_team") {
 			JoinTeam(bot, chatID, msg.Text, DB)
 		} else if strings.HasPrefix(msg.Text, "/join_match") {
-			joinMatch(bot, chatID, msg.Text)
+			JoinMatch(bot, chatID, msg.Text, DB)
 		} else if strings.HasPrefix(userStates[userID], "register") {
 			registerPlayer(bot, msg, DB)
 		} else {
@@ -277,98 +280,40 @@ func listProfile(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
 	bot.Send(tgbotapi.NewMessage(chatID, message))
 }
 
-// Просмотр списка матчей
-func listMatches(bot *tgbotapi.BotAPI, chatID int64) {
-	var matches []models.Match
+// func viewStatistics(bot *tgbotapi.BotAPI, chatID int64) {
+// 	var player models.Player
+// 	err := DB.Where("chat_id = ?", chatID).Preload("Team").First(&player).Error
+// 	if err != nil {
+// 		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
+// 		return
+// 	}
 
-	err := DB.Find(&matches).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Не удалось получить список матчей. Попробуйте позже."))
-		return
-	}
+// 	var stats []models.MatchStatistics
+// 	err = DB.Where("player_id = ?", player.ID).Find(&stats).Error
+// 	if err != nil {
+// 		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при получении статистики. Попробуйте позже."))
+// 		log.Printf("Ошибка получения статистики: %v", err)
+// 		return
+// 	}
 
-	if len(matches) == 0 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Предстоящих матчей нет."))
-		return
-	}
+// 	totalPoints, totalAssists, totalRebounds := 0, 0, 0
+// 	for _, stat := range stats {
+// 		totalPoints += stat.Points
+// 		totalAssists += stat.Assists
+// 		totalRebounds += stat.Rebounds
+// 	}
 
-	message := "Список предстоящих матчей:\n"
-	for _, match := range matches {
-		message += fmt.Sprintf("- Матч #%d: %s vs %s (%s)\n", match.ID, match.Team1ID, match.Team2ID, match.Location)
-	}
-	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
+// 	message := fmt.Sprintf("Статистика игрока %s:\nОчки: %d\nПередачи: %d\nПодборы: %d",
+// 		player.Name, totalPoints, totalAssists, totalRebounds)
 
-// Запись на матч
-func joinMatch(bot *tgbotapi.BotAPI, chatID int64, text string) {
-	parts := strings.Split(text, " ")
-	if len(parts) != 2 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_match ID_матча"))
-		return
-	}
+// 	if player.Team != nil {
+// 		message += fmt.Sprintf("\nКоманда: %s", player.Team.Name)
+// 	}
 
-	matchID, err := strconv.Atoi(parts[1])
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "ID матча должно быть числом."))
-		return
-	}
+// 	bot.Send(tgbotapi.NewMessage(chatID, message))
+// }
 
-	var match models.Match
-	if err := DB.First(&match, matchID).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Матч не найден. Проверьте ID матча."))
-		return
-	}
-
-	var player models.Player
-	if err := DB.Where("chat_id = ?", chatID).First(&player).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
-		return
-	}
-
-	// Привязка игрока к матчу
-	// match. = append(match.Players, player)
-	// if err := DB.Save(&match).Error; err != nil {
-	// 	bot.Send(tgbotapi.NewMessage(chatID, "Ошибка записи на матч. Попробуйте позже."))
-	// 	return
-	// }
-
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Вы успешно записались на матч #%d!", match.ID)))
-}
-
-func viewStatistics(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
-	var player models.Player
-	err := DB.Where("chat_id = ?", chatID).Preload("Team").First(&player).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
-		return
-	}
-
-	var stats []models.MatchStatistics
-	err = DB.Where("player_id = ?", player.ID).Find(&stats).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при получении статистики. Попробуйте позже."))
-		log.Printf("Ошибка получения статистики: %v", err)
-		return
-	}
-
-	totalPoints, totalAssists, totalRebounds := 0, 0, 0
-	for _, stat := range stats {
-		totalPoints += stat.Points
-		totalAssists += stat.Assists
-		totalRebounds += stat.Rebounds
-	}
-
-	message := fmt.Sprintf("Статистика игрока %s:\nОчки: %d\nПередачи: %d\nПодборы: %d",
-		player.Name, totalPoints, totalAssists, totalRebounds)
-
-	if player.Team != nil {
-		message += fmt.Sprintf("\nКоманда: %s", player.Team.Name)
-	}
-
-	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
-
-func updateProfile(bot *tgbotapi.BotAPI, chatID int64, msg *tgbotapi.Message, userID int64) {
+func updateProfile(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 	var player models.Player
 	err := DB.Where("chat_id = ?", chatID).First(&player).Error
 	if err != nil {
@@ -380,7 +325,7 @@ func updateProfile(bot *tgbotapi.BotAPI, chatID int64, msg *tgbotapi.Message, us
 	bot.Send(tgbotapi.NewMessage(chatID, "Введите новые данные профиля в формате:\nРост (см), Вес (кг), Позиция"))
 }
 
-func processUpdateProfile(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, userID int64) {
+func processUpdateProfile(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	input := strings.Split(msg.Text, ",")
 	if len(input) != 3 {
 		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Неверный формат. Попробуйте снова: Рост (см), Вес (кг), Позиция"))

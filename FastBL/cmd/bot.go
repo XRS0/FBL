@@ -19,6 +19,17 @@ import (
 var DB *gorm.DB
 var userStates = make(map[int64]string)
 
+// Хранилище администраторов
+var admins = map[int64]bool{
+	123456789: true, // Пример chatID администратора
+	987654321: true, // Другой администратор
+}
+
+// Проверка, является ли пользователь администратором
+func IsAdmin(chatID int64) bool {
+	return admins[chatID]
+}
+
 func main() {
 	DB = InitDatabase()
 	go StartWebServer()

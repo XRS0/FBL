@@ -5,16 +5,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gorm.io/gorm"
 )
 
+// GetMatchByID получает информацию о матче по ID
 func GetMatchByID(db *gorm.DB, matchID int) (*models.Match, error) {
 	var match models.Match
-	err := db.Preload("Team1.Players").Preload("Team2.Players").First(&match, matchID).Error
+	err := db.Preload("Team1").Preload("Team2").First(&match, matchID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return nil, errors.New("матч не найден")
 	} else if err != nil {
@@ -23,7 +22,7 @@ func GetMatchByID(db *gorm.DB, matchID int) (*models.Match, error) {
 	return &match, nil
 }
 
-// GetAllMatches получает список всех матчей
+// GetAllMatches возвращает список всех матчей
 func GetAllMatches(db *gorm.DB) ([]models.Match, error) {
 	var matches []models.Match
 	err := db.Preload("Team1").Preload("Team2").Find(&matches).Error
@@ -43,7 +42,6 @@ func UpdateMatch(db *gorm.DB, matchID int, team1ID, team2ID uint, date time.Time
 		return err
 	}
 
-	// Обновление данных
 	match.Team1ID = team1ID
 	match.Team2ID = team2ID
 	match.Date = date
@@ -52,6 +50,7 @@ func UpdateMatch(db *gorm.DB, matchID int, team1ID, team2ID uint, date time.Time
 	return db.Save(&match).Error
 }
 
+// CreateMatch создает новый матч
 func CreateMatch(db *gorm.DB, team1ID, team2ID uint, date time.Time, location string) (*models.Match, error) {
 	if team1ID == team2ID {
 		return nil, errors.New("команды не могут быть одинаковыми")
@@ -71,104 +70,66 @@ func CreateMatch(db *gorm.DB, team1ID, team2ID uint, date time.Time, location st
 	return &match, nil
 }
 
-// Просмотр списка матчей
-func ListMatches(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
-	var matches []models.Match
-
-	err := DB.Find(&matches).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Не удалось получить список матчей. Попробуйте позже."))
-		return
-	}
-
-	if len(matches) == 0 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Предстоящих матчей нет."))
-		return
-	}
-
-	message := "Список предстоящих матчей:\n"
-	for _, match := range matches {
-		message += fmt.Sprintf("- Матч #%d: %v vs %v (%s)\n", match.ID, match.Team1ID, match.Team2ID, match.Location)
-	}
-	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
-
-// Запись на матч
-func JoinMatch(bot *tgbotapi.BotAPI, chatID int64, text string, DB *gorm.DB) {
-	parts := strings.Split(text, " ")
-	if len(parts) != 2 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_match ID_матча"))
-		return
-	}
-
-	matchID, err := strconv.Atoi(parts[1])
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "ID матча должно быть числом."))
-		return
-	}
-
+// DeleteMatch удаляет матч по ID
+func DeleteMatch(db *gorm.DB, matchID int) error {
 	var match models.Match
-	if err := DB.First(&match, matchID).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Матч не найден. Проверьте ID матча."))
-		return
+	err := db.First(&match, matchID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return errors.New("матч не найден")
+	} else if err != nil {
+		return err
 	}
 
-	var player models.Player
-	if err := DB.Where("chat_id = ?", chatID).First(&player).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
-		return
-	}
-
-	// Привязка игрока к матчу
-	// match. = append(match.Players, player)
-	// if err := DB.Save(&match).Error; err != nil {
-	// 	bot.Send(tgbotapi.NewMessage(chatID, "Ошибка записи на матч. Попробуйте позже."))
-	// 	return
-	// }
-
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Вы успешно записались на матч #%d!", match.ID)))
+	return db.Delete(&match).Error
 }
 
 // Добавление новой статистики матча
-func CreateMatchStatistic(db *gorm.DB, stat models.MatchStatistics) error {
-	if err := db.Create(&stat).Error; err != nil {
-		return fmt.Errorf("ошибка при создании записи: %w", err)
+func CreateMatchStatistics(db *gorm.DB, matchID uint, teamID1, teamID2 uint, team1Score, team2Score int) (*models.MatchStatistics, error) {
+	// Проверяем, существует ли матч с таким ID
+	var match models.Match
+	if err := db.First(&match, matchID).Error; err != nil {
+		return nil, errors.New("матч с таким ID не найден")
 	}
-	return nil
+
+	// Создаем статистику матча с таким же ID
+	stats := models.MatchStatistics{
+		ID:         matchID, // ID статистики совпадает с ID матча
+		MatchID:    matchID,
+		TeamID1:    teamID1,
+		TeamID2:    teamID2,
+		Team1Score: team1Score,
+		Team2Score: team2Score,
+	}
+
+	if err := db.Create(&stats).Error; err != nil {
+		return nil, err
+	}
+
+	return &stats, nil
 }
 
-// Получение статистики матча по ID
-func GetMatchStatisticByID(db *gorm.DB, id uint) (models.MatchStatistics, error) {
-	var stat models.MatchStatistics
-	if err := db.First(&stat, id).Error; err != nil {
-		return stat, fmt.Errorf("запись с ID %d не найдена: %w", id, err)
+// Получение записи статистики по ID
+func GetStatisticsByMatchID(db *gorm.DB, matchID uint) (*models.MatchStatistics, error) {
+	var stats models.MatchStatistics
+	err := db.First(&stats, "match_id = ?", matchID).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, errors.New("статистика для матча не найдена")
+	} else if err != nil {
+		return nil, err
 	}
-	return stat, nil
+	return &stats, nil
 }
 
-// Обновление статистики матча
-func UpdateMatchStatistic(db *gorm.DB, id uint, updatedStat models.MatchStatistics) error {
-	var stat models.MatchStatistics
-	if err := db.First(&stat, id).Error; err != nil {
-		return fmt.Errorf("запись с ID %d не найдена: %w", id, err)
+// Удаление записи статистики по ID
+func DeleteMatchStatistic(db *gorm.DB, id string) string {
+	statID, err := strconv.Atoi(id)
+	if err != nil {
+		return "Некорректный ID."
 	}
 
-	stat.MatchID = updatedStat.MatchID
-	stat.TeamID1 = updatedStat.TeamID1
-	stat.TeamID2 = updatedStat.TeamID2
-	stat.Team1Score = updatedStat.Team1Score
-	stat.Team2Score = updatedStat.Team2Score
-
-	if err := db.Save(&stat).Error; err != nil {
-		return fmt.Errorf("ошибка при обновлении записи: %w", err)
+	if err := db.Delete(&models.MatchStatistics{}, statID).Error; err != nil {
+		return "Ошибка удаления статистики матча: " + err.Error()
 	}
-	return nil
-}
 
-// Удаление статистики матча по ID
-func DeleteMatchStatistic(db *gorm.DB, id uint) error {
-	if err := db.Delete(&models.MatchStatistics{}, id).Error; err != nil {
-		return fmt.Errorf("ошибка при удалении записи с ID %d: %w", id, err)
-	}
-	return nil
+	return fmt.Sprintf("Статистика матча с ID=%d успешно удалена.", statID)
 }

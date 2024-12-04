@@ -126,15 +126,15 @@ func CreateTeam(bot *tgbotapi.BotAPI, chatID int64, userID int, userStates map[i
 	userStates[int64(userID)] = "create_team_name"
 }
 
-func GetTeamByID(db *gorm.DB, teamID int) (*models.Team, error) {
+func GetTeamByID(db *gorm.DB, teamID int) *models.Team {
 	var team models.Team
 	err := db.Preload("Players").First(&team, teamID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("команда с таким ID не найдена")
+		return nil
 	} else if err != nil {
-		return nil, err
+		return nil
 	}
-	return &team, nil
+	return &team
 }
 
 func ListPlayersByTeam(bot *tgbotapi.BotAPI, chatID int64, teamName string, DB *gorm.DB) {

@@ -211,11 +211,6 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Статистика успешно создана для матча #%d", stat.ID)))
 
 	case "/get_stat":
-		if !isAdmin(chatID) {
-			bot.Send(tgbotapi.NewMessage(chatID, "У вас нет прав для выполнения этой команды."))
-			return
-		}
-
 		if len(commandParts) < 2 {
 			bot.Send(tgbotapi.NewMessage(chatID, "Используйте: /get_stat <MatchID>"))
 			return
@@ -233,7 +228,11 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 			return
 		}
 
-		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Статистика матча #%d: %v", matchID, stat)))
+		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf(
+			"Счет команды %s - %v,\n Счет команды %s - %v\n",
+			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team1Score,
+			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team2Score,
+		)))
 
 	case "/delete_stat":
 		if !isAdmin(chatID) {

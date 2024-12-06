@@ -104,9 +104,8 @@ function closeRules() {
     document.body.classList.remove("noscroll");
 }
 
-// URL для получения данных о матчах и статистике
-const MATCHES_API = "http://localhost:8080/matches";
-const STATISTICS_API = "http://localhost:8080/statistics";
+const MATCHES_API = "http://89.104.69.138:8080/matches";
+const STATISTICS_API = "http://89.104.69.138:8080/statistics";
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {
@@ -118,6 +117,8 @@ async function fetchMatches() {
         }
 
         const matches = await response.json();
+        matches.sort((a, b) => new Date(a.time) - new Date(b.time));
+
         updateMatchesContainer(matches);
     } catch (error) {
         console.error("Ошибка загрузки матчей:", error);
@@ -140,9 +141,11 @@ async function fetchStatistics() {
     }
 }
 
+let createdConditions = [];
+
 // Функция обновления блока матчей
 function updateMatchesContainer(matches) {
-    const matchesGrid = document.querySelector(".matches-grid-block");
+    const matchesGrid = document.getElementById("matches-container");
 
     // Очищаем существующий контент
     matchesGrid.innerHTML = "";
@@ -152,18 +155,27 @@ function updateMatchesContainer(matches) {
         matchWidget.className = "match-widget";
 
         matchWidget.innerHTML = `
-            <img src="../assets/images/thumbnail.png" alt="thumb">
+            <img src="../assets/images/Thumbnail.png" alt="thumb">
             <div class="match-info">
-                <div class="match-time">${match.time}</div>
+                <div class="match-time">${formatDateTime(match.time).time}</div>
                 <div class="match-score">${match.team1_score}:${match.team2_score}</div>
                 <div class="match-status">
                     <span style="text-decoration: underline;">${match.status}</span>
                 </div>
             </div>
-            <img src="../assets/images/thumbnail.png" alt="thumb">
+            <img src="../assets/images/Thumbnail.png" alt="thumb">
         `;
 
-        matchesGrid.appendChild(matchWidget);
+        let isHeaderExist = createdConditions.some(i => i.time.slice(0, 9) == match.time.slice(0, 9) && i.loc == match.loc);
+        
+        if (!isHeaderExist) {
+            createdConditions.push({ time: match.time, loc: match.loc });
+            matchesGrid.appendChild(wrapMatches(matchWidget.innerHTML, match.time, match.loc));
+        } else {
+            let matchesGrid = document.querySelectorAll(".matches-grid-block");
+            matchesGrid = matchesGrid[matchesGrid.length - 1];
+            matchesGrid.appendChild(matchWidget);
+        }
     });
 }
 
@@ -177,25 +189,104 @@ function updateStatisticsContainer(statistics) {
     statistics.forEach((team, index) => {
         const teamRow = document.createElement("div");
         teamRow.className = "table-names table-cell";
-        teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
+
+        switch(index) {
+            case 0:
+                teamRow.style.backgroundColor = "#3F6FFF";
+                break;
+            case 1:
+                teamRow.style.backgroundColor = "#2B2B2B";
+                break;
+            case 2:
+                teamRow.style.backgroundColor = "#1B1B1B";
+                break;
+            default:
+                teamRow.style.border= "1px solid #343434";
+                break;
+        }
 
         teamRow.innerHTML = `
             <div class="team-info">
-                <img src="../assets/images/thumbnail.png" alt="team-icon" class="team-logo-margin">
+                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
                 <div>${team.name}</div>
-                <div class="hide-team-name">${team.abbreviation}</div>
+                <div class="hide-team-name">${getShortName(team.name)}</div>
             </div>
             <div class="centered-points">
                 <div class="name-of-point">${team.games}</div>
                 <div class="name-of-point">${team.wins}</div>
                 <div class="name-of-point">${team.losses}</div>
-                <div class="name-of-point"><span style="color: #3F6FFF;">${team.points}</span></div>
+                <div class="name-of-point"><span ${index === 0 ? 'style="color: #FFF;"' : 'style="color: #3F6FFF;"'}>${team.points}</span></div>
             </div>
         `;
 
         statisticsGrid.appendChild(teamRow);
     });
 }
+
+function wrapMatches(container, date, location) {
+    let assembledContainer = document.createElement("div");
+    assembledContainer.classList.add("container");
+    assembledContainer.innerHTML = `
+        <div class="matches-info-bar">
+            <div>
+                <h2 id="matches-date">${formatDateTime(date).date}</h2>
+                <h3 id="matches-location">${location}</h3>
+            </div>
+                
+            <div class="matches-hint">
+                Время проведения <br>
+                Счет игры <br>
+                Статус
+            </div>
+        </div>
+        <div class="separation-line"></div>
+
+        <div class="matches-block">
+            <div class="matches-grid-block">
+                <div class="match-widget">
+                    ${container}
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return assembledContainer;
+}
+
+function getShortName(name) {
+    if (name.split(" ").length == 1) return name.slice(0, 2);
+    let [fWord, sWord] = name.split(" ");
+    return (fWord[0] + sWord[0]).toUpperCase();
+}
+
+function formatDateTime(timestamp) {
+    // Создаём объект даты из строки
+    const dateObj = new Date(timestamp);
+
+    // Массив названий месяцев
+    const months = [
+        "января", "февраля", "марта", "апреля", "мая", "июня",
+        "июля", "августа", "сентября", "октября", "ноября", "декабря"
+    ];
+
+    // Проверка на корректность даты
+    if (isNaN(dateObj.getTime())) {
+        return { date: "Некорректная дата", time: "Некорректное время" };
+    }
+
+    // Извлекаем день, месяц и время
+    const day = dateObj.getDate();
+    const month = months[dateObj.getMonth()]; // Название месяца
+    const hours = String(dateObj.getHours()).padStart(2, '0'); // Часы (добавляем 0 при необходимости)
+    const minutes = String(dateObj.getMinutes()).padStart(2, '0'); // Минуты (добавляем 0 при необходимости)
+
+    // Форматируем результаты
+    const formattedDate = `${day} ${month}`;
+    const formattedTime = `${hours}:${minutes}`;
+
+    return { date: formattedDate, time: formattedTime };
+}
+
 
 // Загружаем данные при загрузке страницы
 document.addEventListener("DOMContentLoaded", () => {

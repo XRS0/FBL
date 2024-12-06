@@ -528,6 +528,11 @@
         top: 2.7vw;
         right: 2.8vw;
     }
+
+    .matches-title {
+        font-size: 9vw;
+        margin-top: 2vw;
+    }
 }
 
 @media (max-width: 480px) {
@@ -639,6 +644,9 @@
     }
     .statistics {
         font-size: 14px;
+    }
+    .hide-team-name {
+        display: block;
     }
 
     .table-grid-rows {

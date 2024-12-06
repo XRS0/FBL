@@ -105,8 +105,8 @@ function closeRules() {
 }
 
 // URL для получения данных о матчах и статистике
-const MATCHES_API = "89.104.69.138:8080/matches";
-const STATISTICS_API = "89.104.69.138:8080/statistics";
+const MATCHES_API = "http://89.104.69.138:8080/matches";
+const STATISTICS_API = "http://89.104.69.138:8080/statistics";
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {
@@ -152,7 +152,7 @@ function updateMatchesContainer(matches) {
         matchWidget.className = "match-widget";
 
         matchWidget.innerHTML = `
-            <img src="../assets/images/thumbnail.png" alt="thumb">
+            <img src="../assets/images/Thumbnail.png" alt="thumb">
             <div class="match-info">
                 <div class="match-time">${match.time}</div>
                 <div class="match-score">${match.team1_score}:${match.team2_score}</div>
@@ -160,7 +160,7 @@ function updateMatchesContainer(matches) {
                     <span style="text-decoration: underline;">${match.status}</span>
                 </div>
             </div>
-            <img src="../assets/images/thumbnail.png" alt="thumb">
+            <img src="../assets/images/Thumbnail.png" alt="thumb">
         `;
 
         matchesGrid.appendChild(matchWidget);
@@ -178,12 +178,12 @@ function updateStatisticsContainer(statistics) {
         const teamRow = document.createElement("div");
         teamRow.className = "table-names table-cell";
         teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
+        teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
 
         teamRow.innerHTML = `
             <div class="team-info">
-                <img src="../assets/images/thumbnail.png" alt="team-icon" class="team-logo-margin">
+                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
                 <div>${team.name}</div>
-                <div class="hide-team-name>ПОПА</div>
             </div>
             <div class="centered-points">
                 <div class="name-of-point">${team.games}</div>

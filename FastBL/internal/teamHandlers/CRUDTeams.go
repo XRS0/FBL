@@ -130,6 +130,7 @@ func GetTeamByID(db *gorm.DB, teamID int) *models.Team {
 	var team models.Team
 	err := db.Preload("Players").First(&team, teamID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
+		// fmt.Println("\n\nпопа\n\n\n")
 		return nil
 	} else if err != nil {
 		return nil

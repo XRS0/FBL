@@ -1,34 +1,39 @@
 package wsh
 
 import (
+	matchhandlers "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
+	teamhandlers "basketball-league/internal/teamHandlers"
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"gorm.io/gorm"
 )
 
-// MatchResponse описывает формат данных для матча.
 type MatchResponse struct {
 	Time       string `json:"time"`
 	Team1Score int    `json:"team1_score"`
+	Team1Name  string `json:"team1_name"`
+	Team2Name  string `json:"team2_name"`
 	Team2Score int    `json:"team2_score"`
 	Status     string `json:"status"`
+	Location   string `json:"loc"`
 }
 
-// TeamStatistics описывает формат данных для статистики команд.
 type TeamStatistics struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	Games        int    `json:"games"`
-	Wins         int    `json:"wins"`
-	Losses       int    `json:"losses"`
-	Points       int    `json:"points"`
+	Name   string `json:"name"`
+	Games  int    `json:"games"`
+	Wins   int    `json:"wins"`
+	Losses int    `json:"losses"`
+	Points int    `json:"points"`
 }
 
-// ServeMatchesHandler отправляет данные о матчах.
 func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
+	if db == nil {
+		log.Fatal("Объект базы данных не инициализирован!")
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		var matches []models.Match
 		err := db.Preload("Team1").Preload("Team2").Find(&matches).Error
@@ -40,7 +45,11 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 		var results []MatchResponse
 		for _, match := range matches {
 			var stats models.MatchStatistics
-			db.Where("match_id = ?", match.ID).First(&stats)
+			err := db.Where("match_id = ?", match.ID).First(&stats).Error
+			if err != nil {
+				log.Printf("Статистика для матча %d не найдена: %v", match.ID, err)
+				continue
+			}
 
 			// Определяем статус матча
 			var status string
@@ -50,10 +59,42 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 				status = "Завершен"
 			}
 
+			// Получение информации о командах
+			team1 := teamhandlers.GetTeamByID(db, int(stats.TeamID1))
+			team2 := teamhandlers.GetTeamByID(db, int(stats.TeamID2))
+
+			// Проверяем, что команды существуют
+			var team1Name, team2Name string
+			if team1 != nil {
+				team1Name = team1.Name
+			} else {
+				team1Name = "Неизвестная команда"
+				log.Printf("Команда с ID %d не найдена", stats.TeamID1)
+			}
+
+			if team2 != nil {
+				team2Name = team2.Name
+			} else {
+				team2Name = "Неизвестная команда"
+				log.Printf("Команда с ID %d не найдена", stats.TeamID2)
+			}
+
+			// Получение информации о локации
+			matchDetails := matchhandlers.GetMatchByID(db, int(stats.MatchID))
+			location := "Неизвестная локация"
+			if matchDetails != nil {
+				location = matchDetails.Location
+			} else {
+				log.Printf("Матч с ID %d не найден", stats.MatchID)
+			}
+
 			results = append(results, MatchResponse{
-				Time:       match.Date.Format("15:04"),
+				Time:       match.Date.Format(time.DateTime),
 				Team1Score: stats.Team1Score,
 				Team2Score: stats.Team2Score,
+				Team1Name:  team1Name,
+				Team2Name:  team2Name,
+				Location:   location,
 				Status:     status,
 			})
 		}
@@ -63,7 +104,6 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-// ServeStatisticsHandler отправляет данные о статистике команд.
 func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var teams []models.Team
@@ -75,7 +115,6 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 
 		var results []TeamStatistics
 		for _, team := range teams {
-			// Подсчет статистики для команды
 			var games, wins, losses, points int
 
 			var matches []models.Match
@@ -96,12 +135,11 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 			}
 
 			results = append(results, TeamStatistics{
-				Name:         team.Name,
-				Abbreviation: "TB",
-				Games:        games,
-				Wins:         wins,
-				Losses:       losses,
-				Points:       points,
+				Name:   team.Name,
+				Games:  games,
+				Wins:   wins,
+				Losses: losses,
+				Points: points,
 			})
 		}
 
@@ -110,11 +148,26 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-func StartWS(DB *gorm.DB) {
-	http.HandleFunc("/matches", ServeMatchesHandler(DB))
-	http.HandleFunc("/statistics", ServeStatisticsHandler(DB))
+func withCORS(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 
-	// Запуск сервера
+		// Обработка предварительных запросов CORS (OPTIONS)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		h(w, r)
+	}
+}
+
+func StartWS(DB *gorm.DB) {
+	http.HandleFunc("/matches", withCORS(ServeMatchesHandler(DB)))
+	http.HandleFunc("/statistics", withCORS(ServeStatisticsHandler(DB)))
+
 	log.Println("Сервер запущен на http://localhost:8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

@@ -23,6 +23,7 @@ var userStates = make(map[int64]string)
 var admins = map[int64]bool{
 	1324977667: true,
 	984866387:  true,
+	1655151699: true,
 }
 
 // Проверка, является ли пользователь администратором
@@ -112,8 +113,11 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 		team1ID, _ := strconv.Atoi(args[0])
 		team2ID, _ := strconv.Atoi(args[1])
-		date, _ := time.Parse("2006-01-02 15:04:05", args[2])
-		location := args[3]
+		date, err := time.Parse(time.DateTime, fmt.Sprint(args[2]+" "+args[3]))
+		if err != nil {
+			fmt.Println("Пошел ты нахер козел")
+		}
+		location := args[4]
 		match, err := CreateMatch(DB, uint(team1ID), uint(team2ID), date, location)
 		if err != nil {
 			bot.Send(tgbotapi.NewMessage(chatID, "Ошибка создания матча: "+err.Error()))
@@ -131,9 +135,9 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 			return
 		}
 		matchID, _ := strconv.Atoi(commandParts[1])
-		match, err := GetMatchByID(DB, matchID)
-		if err != nil {
-			bot.Send(tgbotapi.NewMessage(chatID, "Ошибка: "+err.Error()))
+		match := GetMatchByID(DB, matchID)
+		if match != nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "матч не найден"))
 			return
 		}
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Матч #%d: %s vs %s в %s", match.ID, match.Team1.Name, match.Team2.Name, match.Location)))
@@ -229,7 +233,8 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf(
-			"Счет команды %s - %v,\n Счет команды %s - %v\n",
+			"Счет команды %s - %v,\n"+
+				"Счет команды %s - %v\n",
 			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team1Score,
 			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team2Score,
 		)))

@@ -229,7 +229,8 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf(
-			"Счет команды %s - %v,\n Счет команды %s - %v\n",
+			"Счет команды %s - %v,\n"+
+				"Счет команды %s - %v\n",
 			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team1Score,
 			GetTeamByID(DB, int(stat.TeamID1)).Name, stat.Team2Score,
 		)))

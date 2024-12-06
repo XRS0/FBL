@@ -9,7 +9,6 @@ import (
 	"gorm.io/gorm"
 )
 
-// MatchResponse описывает формат данных для матча.
 type MatchResponse struct {
 	Time       string `json:"time"`
 	Team1Score int    `json:"team1_score"`
@@ -17,14 +16,12 @@ type MatchResponse struct {
 	Status     string `json:"status"`
 }
 
-// TeamStatistics описывает формат данных для статистики команд.
 type TeamStatistics struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	Games        int    `json:"games"`
-	Wins         int    `json:"wins"`
-	Losses       int    `json:"losses"`
-	Points       int    `json:"points"`
+	Name   string `json:"name"`
+	Games  int    `json:"games"`
+	Wins   int    `json:"wins"`
+	Losses int    `json:"losses"`
+	Points int    `json:"points"`
 }
 
 // ServeMatchesHandler отправляет данные о матчах.
@@ -63,7 +60,6 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
-// ServeStatisticsHandler отправляет данные о статистике команд.
 func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var teams []models.Team
@@ -75,7 +71,6 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 
 		var results []TeamStatistics
 		for _, team := range teams {
-			// Подсчет статистики для команды
 			var games, wins, losses, points int
 
 			var matches []models.Match
@@ -96,12 +91,11 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 			}
 
 			results = append(results, TeamStatistics{
-				Name:         team.Name,
-				Abbreviation: "TB",
-				Games:        games,
-				Wins:         wins,
-				Losses:       losses,
-				Points:       points,
+				Name:   team.Name,
+				Games:  games,
+				Wins:   wins,
+				Losses: losses,
+				Points: points,
 			})
 		}
 
@@ -114,7 +108,6 @@ func StartWS(DB *gorm.DB) {
 	http.HandleFunc("/matches", ServeMatchesHandler(DB))
 	http.HandleFunc("/statistics", ServeStatisticsHandler(DB))
 
-	// Запуск сервера
 	log.Println("Сервер запущен на http://localhost:8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {

@@ -112,7 +112,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 		team1ID, _ := strconv.Atoi(args[0])
 		team2ID, _ := strconv.Atoi(args[1])
-		date, err := time.Parse("2006-01-02 15:04:05", args[2])
+		date, err := time.Parse(time.DateTime, args[2])
 		if err != nil {
 			fmt.Println("Пошел ты нахер козел")
 		}

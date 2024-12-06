@@ -2,9 +2,11 @@ package wsh
 
 import (
 	"basketball-league/internal/models"
+	teamhandlers "basketball-league/internal/teamHandlers"
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -12,6 +14,8 @@ import (
 type MatchResponse struct {
 	Time       string `json:"time"`
 	Team1Score int    `json:"team1_score"`
+	Team1Name  string `json: "team1_name"`
+	Team2Name  string `json: "team2_name"`
 	Team2Score int    `json:"team2_score"`
 	Status     string `json:"status"`
 }
@@ -48,8 +52,10 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 			}
 
 			results = append(results, MatchResponse{
-				Time:       match.Date.Format("15:04"),
+				Time:       match.Date.Format(time.DateTime),
 				Team1Score: stats.Team1Score,
+				Team1Name:  teamhandlers.GetTeamByID(db, int(stats.TeamID1)).Name,
+				Team2Name:  teamhandlers.GetTeamByID(db, int(stats.TeamID2)).Name,
 				Team2Score: stats.Team2Score,
 				Status:     status,
 			})

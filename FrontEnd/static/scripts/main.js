@@ -103,3 +103,102 @@ function closeRules() {
     popup.classList.add("hiden-rules");
     document.body.classList.remove("noscroll");
 }
+
+// URL для получения данных о матчах и статистике
+const MATCHES_API = "89.104.69.138:8080/matches";
+const STATISTICS_API = "89.104.69.138:8080/statistics";
+
+// Функция для загрузки и отображения матчей
+async function fetchMatches() {
+    try {
+        const response = await fetch(MATCHES_API);
+
+        if (!response.ok) {
+            throw new Error(`Ошибка HTTP: ${response.status}`);
+        }
+
+        const matches = await response.json();
+        updateMatchesContainer(matches);
+    } catch (error) {
+        console.error("Ошибка загрузки матчей:", error);
+    }
+}
+
+// Функция для загрузки и отображения статистики
+async function fetchStatistics() {
+    try {
+        const response = await fetch(STATISTICS_API);
+
+        if (!response.ok) {
+            throw new Error(`Ошибка HTTP: ${response.status}`);
+        }
+
+        const statistics = await response.json();
+        updateStatisticsContainer(statistics);
+    } catch (error) {
+        console.error("Ошибка загрузки статистики:", error);
+    }
+}
+
+// Функция обновления блока матчей
+function updateMatchesContainer(matches) {
+    const matchesGrid = document.querySelector(".matches-grid-block");
+
+    // Очищаем существующий контент
+    matchesGrid.innerHTML = "";
+
+    matches.forEach(match => {
+        const matchWidget = document.createElement("div");
+        matchWidget.className = "match-widget";
+
+        matchWidget.innerHTML = `
+            <img src="../assets/images/thumbnail.png" alt="thumb">
+            <div class="match-info">
+                <div class="match-time">${match.time}</div>
+                <div class="match-score">${match.team1_score}:${match.team2_score}</div>
+                <div class="match-status">
+                    <span style="text-decoration: underline;">${match.status}</span>
+                </div>
+            </div>
+            <img src="../assets/images/thumbnail.png" alt="thumb">
+        `;
+
+        matchesGrid.appendChild(matchWidget);
+    });
+}
+
+// Функция обновления блока статистики
+function updateStatisticsContainer(statistics) {
+    const statisticsGrid = document.querySelector(".table-grid-rows");
+
+    // Очищаем существующий контент
+    statisticsGrid.innerHTML = "";
+
+    statistics.forEach((team, index) => {
+        const teamRow = document.createElement("div");
+        teamRow.className = "table-names table-cell";
+        teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
+
+        teamRow.innerHTML = `
+            <div class="team-info">
+                <img src="../assets/images/thumbnail.png" alt="team-icon" class="team-logo-margin">
+                <div>${team.name}</div>
+                <div class="hide-team-name>ПОПА</div>
+            </div>
+            <div class="centered-points">
+                <div class="name-of-point">${team.games}</div>
+                <div class="name-of-point">${team.wins}</div>
+                <div class="name-of-point">${team.losses}</div>
+                <div class="name-of-point"><span style="color: #3F6FFF;">${team.points}</span></div>
+            </div>
+        `;
+
+        statisticsGrid.appendChild(teamRow);
+    });
+}
+
+// Загружаем данные при загрузке страницы
+document.addEventListener("DOMContentLoaded", () => {
+    fetchMatches();
+    fetchStatistics();
+});

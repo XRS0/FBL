@@ -104,9 +104,25 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
+func withCORS(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		// Обработка предварительных запросов CORS (OPTIONS)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		h(w, r)
+	}
+}
+
 func StartWS(DB *gorm.DB) {
-	http.HandleFunc("/matches", ServeMatchesHandler(DB))
-	http.HandleFunc("/statistics", ServeStatisticsHandler(DB))
+	http.HandleFunc("/matches", withCORS(ServeMatchesHandler(DB)))
+	http.HandleFunc("/statistics", withCORS(ServeStatisticsHandler(DB)))
 
 	log.Println("Сервер запущен на http://localhost:8080")
 	err := http.ListenAndServe(":8080", nil)

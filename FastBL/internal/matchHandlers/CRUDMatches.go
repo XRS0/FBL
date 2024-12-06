@@ -11,15 +11,16 @@ import (
 )
 
 // GetMatchByID получает информацию о матче по ID
-func GetMatchByID(db *gorm.DB, matchID int) (*models.Match, error) {
+func GetMatchByID(db *gorm.DB, matchID int) *models.Match {
 	var match models.Match
 	err := db.Preload("Team1").Preload("Team2").First(&match, matchID).Error
 	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.New("матч не найден")
+		return nil
 	} else if err != nil {
-		return nil, err
+		fmt.Println("матч не найден")
+		return nil
 	}
-	return &match, nil
+	return &match
 }
 
 // GetAllMatches возвращает список всех матчей

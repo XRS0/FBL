@@ -178,7 +178,6 @@ function updateStatisticsContainer(statistics) {
         const teamRow = document.createElement("div");
         teamRow.className = "table-names table-cell";
         teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
-        teamRow.style.backgroundColor = index === 0 ? "#3F6FFF" : "#2B2B2B";
 
         teamRow.innerHTML = `
             <div class="team-info">

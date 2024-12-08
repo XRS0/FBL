@@ -286,6 +286,13 @@
     .match-team-name {
         font-size: 4vw;
     }
+
+    .team-info .match-team-name {
+        font-size: 1.6vw;
+        min-height: 5vw;
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
 }
 
 @media (max-width: 768px) {
@@ -397,7 +404,7 @@
         font-size: 2.4vw;
     }
     .table-names {
-        padding: 0 3.65%;
+        padding: 2% 3.65%;
         margin-bottom: 3%;
     }
     .table-cell {
@@ -446,6 +453,10 @@
     .close-rules {
         top: 2vw;
         right: 2.3vw;
+    }
+
+    .no-matches {
+        font-size: 4vw;
     }
 }
 
@@ -671,7 +682,7 @@
         padding: 0 5px;
     }
     .table-cell {
-        padding: 3px 5px;
+        padding: 5px 10px;
     }
     .team-info img {
         width: 30px;
@@ -682,6 +693,7 @@
     }
     .centered-points {
         font-size: 14px;
+        width: 70%;
     }
     .centered-names {
         display: none;

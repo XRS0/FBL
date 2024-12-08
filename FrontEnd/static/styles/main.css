@@ -329,6 +329,12 @@ h3 {
     aspect-ratio: 1 / 1;
 }
 
+.team-info .match-team-name {
+    font-size: 1.5vw;
+    min-height: 60px;
+    background-size: contain;
+}
+
 .match-info {
     text-align: center;
     font-family: "Unbounded", sans-serif;
@@ -394,6 +400,7 @@ h3 {
 }
 
 .team-info {
+    width: 40%;
     display: flex;
     align-items: center;
 }

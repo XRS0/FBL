@@ -211,8 +211,10 @@ function updateStatisticsContainer(statistics) {
 
         teamRow.innerHTML = `
             <div class="team-info">
-                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
-                <div>${team.name}</div>
+                <div class="match-team-name" style='margin-right: 1vw;'>
+                    ${getShortName(team.name)}
+                </div>
+                <div>${minimizeTeamName(team.name)}</div>
                 <div class="hide-team-name">${getShortName(team.name)}</div>
             </div>
             <div class="centered-points">
@@ -291,14 +293,6 @@ function formatDateTime(timestamp) {
     return { date: formattedDate, time: formattedTime };
 }
 
-
-// Загружаем данные при загрузке страницы
-document.addEventListener("DOMContentLoaded", () => {
-    fetchMatches();
-    fetchStatistics();
-});
-
-
 function goToBot() {
     var url = "https://t.me/BFBLB_bot"; 
     var windowName = "_blank"; 
@@ -306,6 +300,20 @@ function goToBot() {
 
     window.open(url, windowName, windowFeatures);
 }
+
+function minimizeTeamName(name) {
+    if (name.length > 16) {
+        let minimized = name.split(" ")
+        return minimized.map(i => i[0]).join("");
+    } else return name;
+}
+
+
+// Загружаем данные при загрузке страницы
+document.addEventListener("DOMContentLoaded", () => {
+    fetchMatches();
+    fetchStatistics();
+});
 
 document.querySelectorAll(".social-tg").forEach(function (element) {
     element.addEventListener("click", function () {

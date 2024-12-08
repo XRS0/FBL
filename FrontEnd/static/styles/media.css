@@ -165,6 +165,12 @@
         top: 1.5vw;
         right: 1.8vw;
     }
+
+    .match-team-name {
+        height: 100%;
+        min-height: auto;
+        background-size: contain;
+    }
 }
 
 @media (max-width: 1000px) {
@@ -275,6 +281,10 @@
     }
     .match-status {
         font-size: 115%;
+    }
+
+    .match-team-name {
+        font-size: 4vw;
     }
 }
 
@@ -445,7 +455,7 @@
     }
 
     .match-widget {
-        padding: 0 2%;
+        padding: 0.5% 2%;
     }
 
     .match-widget img {
@@ -532,6 +542,11 @@
     .matches-title {
         font-size: 9vw;
         margin-top: 2vw;
+    }
+
+    .match-team-name {
+        height: 90%;
+        min-height: auto;
     }
 }
 
@@ -715,5 +730,10 @@
         top: 3vw;
         right: 3.6vw;
         width: 5%;
+    }
+
+    .match-team-name {
+        height: 100%;
+        font-size: 5.5vw;
     }
 }

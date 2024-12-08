@@ -155,7 +155,9 @@ function updateMatchesContainer(matches) {
         matchWidget.className = "match-widget";
 
         matchWidget.innerHTML = `
-            <img src="../assets/images/Thumbnail.png" alt="thumb">
+            <div class="match-team-name">
+                ${getShortName(match.team1_name)}
+            </div>
             <div class="match-info">
                 <div class="match-time">${formatDateTime(match.time).time}</div>
                 <div class="match-score">${match.team1_score}:${match.team2_score}</div>
@@ -163,7 +165,9 @@ function updateMatchesContainer(matches) {
                     <span style="text-decoration: underline;">${match.status}</span>
                 </div>
             </div>
-            <img src="../assets/images/Thumbnail.png" alt="thumb">
+            <div class="match-team-name">
+                ${getShortName(match.team2_name)}
+            </div>
         `;
 
         let isHeaderExist = createdConditions.some(i => i.time.slice(0, 9) == match.time.slice(0, 9) && i.loc == match.loc);

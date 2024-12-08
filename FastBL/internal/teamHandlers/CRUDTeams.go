@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -82,19 +81,16 @@ func CreateTeamName(bot *tgbotapi.BotAPI, chatID int64, msg *tgbotapi.Message, u
 
 func JoinTeam(bot *tgbotapi.BotAPI, chatID int64, text string, DB *gorm.DB) {
 	parts := strings.Split(text, " ")
-	if len(parts) != 2 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_team \"Номер команды\""))
-		return
-	}
-	teamID, err := strconv.Atoi(parts[1])
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "ID команды должно быть числом."))
+	if len(parts) < 2 {
+		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_team \"Имя команды\""))
 		return
 	}
 
+	teamName := strings.Join(parts[1:], " ")
+
 	var team models.Team
-	if err := DB.First(&team, teamID).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Команда не найдена. Проверьте номер команды."))
+	if err := DB.Where("name = ?", teamName).First(&team).Error; err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Команда с указанным именем не найдена. Проверьте имя команды."))
 		return
 	}
 

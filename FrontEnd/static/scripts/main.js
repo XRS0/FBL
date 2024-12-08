@@ -35,7 +35,7 @@ function scrollDown(currentId) {
             break;
         case "profile":
             document.getElementById("burger-profile").style.backgroundPosition = " 0 100%";
-            window.location.href = "https://vk.com/artist/0pokhval";
+            goToBot();
             if (document.body.offsetWidth > 480) blueIndicator.style.width = "160px";
             break;
     }
@@ -296,4 +296,20 @@ function formatDateTime(timestamp) {
 document.addEventListener("DOMContentLoaded", () => {
     fetchMatches();
     fetchStatistics();
+});
+
+
+function goToBot() {
+    var url = "https://t.me/BFBLB_bot"; 
+    var windowName = "_blank"; 
+    var windowFeatures = "width=800,height=600"; 
+
+    window.open(url, windowName, windowFeatures);
+}
+
+document.querySelectorAll(".social-tg").forEach(function (element) {
+    element.addEventListener("click", function () {
+        const url = "https://t.me/BFBLB_bot"; 
+        window.location.href = url;
+    });
 });

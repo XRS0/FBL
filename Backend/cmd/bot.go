@@ -92,11 +92,14 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		logout(bot, chatID, userID)
 	case "/players":
 		if len(commandParts) < 2 {
-			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ"))
+			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ," +
+				" либо /players_all	если хотите получить всех игроков без команды"))
 		} else {
 			teamName := strings.TrimSpace(commandParts[1])
 			ListPlayersByTeam(bot, chatID, teamName, DB)
 		}
+	case "/players_all":
+		ListPlayersWithoutTeam(bot, chatID, DB)
 	case "/create_match":
 		if !isAdmin(chatID) {
 			bot.Send(tgbotapi.NewMessage(chatID, "У вас нет прав для выполнения этой команды."))

@@ -134,6 +134,34 @@ func GetTeamByID(db *gorm.DB, teamID int) *models.Team {
 	return &team
 }
 
+func ListPlayersWithoutTeam(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
+	if DB == nil || bot == nil {
+		fmt.Println("База данных или бот не инициализированы.")
+		os.Exit(1)
+	}
+
+	var players []models.Player
+	err := DB.Where("team_id IS NULL").Find(&players).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Произошла ошибка при получении списка игроков. Попробуйте позже."))
+		log.Printf("Ошибка при получении списка игроков без команды: %v", err)
+		return
+	}
+
+	if len(players) == 0 {
+		bot.Send(tgbotapi.NewMessage(chatID, "Нет игроков без команды."))
+		return
+	}
+
+	message := "Игроки без команды:\n"
+	for _, player := range players {
+		message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s)\n",
+			player.Name, player.Height, player.Weight, player.Position)
+	}
+
+	bot.Send(tgbotapi.NewMessage(chatID, message))
+}
+
 func ListPlayersByTeam(bot *tgbotapi.BotAPI, chatID int64, teamName string, DB *gorm.DB) {
 	if DB == nil || bot == nil {
 		fmt.Println("База данных или бот не инициализированы.")

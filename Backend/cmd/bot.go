@@ -39,7 +39,7 @@ func main() {
 	go StartWS(DB)
 
 	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
-	//	bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
+	// bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
 	if err != nil {
 		log.Fatalf("Не удалось инициализировать бота: %v", err)
 	}
@@ -80,6 +80,8 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		UpdatePlayer(bot, msg, DB, userStates, temporaryData)
 	case "create_team_name":
 		CreateTeamName(bot, chatID, msg, int(userID), userStates, DB)
+	case "rename_team":
+		RenameTeam(bot, msg, DB, userStates)
 	default:
 		// Если состояние неизвестно, сбрасываем его
 		delete(userStates, userID)
@@ -104,6 +106,8 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		UpdatePlayer(bot, msg, DB, userStates, temporaryData)
 	case "/teams":
 		ListTeams(bot, chatID, DB)
+	//case "/rename_team":
+	//	RenameTeam(bot, msg, DB, userStates)
 	case "/create_team":
 		CreateTeam(bot, chatID, int(userID), userStates, DB)
 	case "/logout":

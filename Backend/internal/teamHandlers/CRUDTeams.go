@@ -134,6 +134,54 @@ func GetTeamByID(db *gorm.DB, teamID int) *models.Team {
 	return &team
 }
 
+// RenameTeam позволяет владельцу команды переименовать команду
+func RenameTeam(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB, userStates map[int64]string) {
+	chatID := msg.Chat.ID
+	userID := msg.From.ID
+
+	// Проверка, находится ли пользователь в состоянии переименования
+	if userStates[userID] != "rename_team" {
+		userStates[userID] = "rename_team"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите новое название для вашей команды:"))
+		return
+	}
+
+	// Проверка существования команды, где пользователь является владельцем
+	var team models.Team
+	err := DB.Where("owner_id = ?", userID).First(&team).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			bot.Send(tgbotapi.NewMessage(chatID, "Вы не являетесь владельцем команды или команда не найдена."))
+		} else {
+			bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при поиске вашей команды. Попробуйте позже."))
+			log.Printf("Ошибка при поиске команды: %v", err)
+		}
+		delete(userStates, userID)
+		return
+	}
+
+	// Проверка длины нового названия
+	newTeamName := msg.Text
+	if len(newTeamName) < 3 {
+		bot.Send(tgbotapi.NewMessage(chatID, "Название команды должно содержать хотя бы 3 символа. Попробуйте снова."))
+		return
+	}
+
+	// Обновление имени команды в базе данных
+	team.Name = newTeamName
+	err = DB.Save(&team).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при обновлении названия команды. Попробуйте снова позже."))
+		log.Printf("Ошибка при обновлении названия команды: %v", err)
+		return
+	}
+
+	// Сброс состояния
+	delete(userStates, userID)
+
+	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Название вашей команды успешно обновлено на: %s", newTeamName)))
+}
+
 func ListPlayersWithoutTeam(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
 	if DB == nil || bot == nil {
 		fmt.Println("База данных или бот не инициализированы.")

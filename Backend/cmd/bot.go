@@ -12,6 +12,8 @@ import (
 	. "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
 	. "basketball-league/internal/teamHandlers"
+	. "basketball-league/internal/tempDataHandlers"
+	. "basketball-league/internal/userHandlers"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gorm.io/gorm"
@@ -19,6 +21,7 @@ import (
 
 var DB *gorm.DB
 var userStates = make(map[int64]string)
+var temporaryData = make(map[int64]map[string]string)
 
 var admins = map[int64]bool{
 	1324977667: true,
@@ -36,6 +39,7 @@ func main() {
 	go StartWS(DB)
 
 	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
+	//	bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
 	if err != nil {
 		log.Fatalf("Не удалось инициализировать бота: %v", err)
 	}
@@ -59,14 +63,26 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
-	state := userStates[userID]
+	// Получаем текущее состояние пользователя
+	state, exists := userStates[userID]
 
+	if !exists {
+		// Если состояния нет, проверяем команду
+		processCommand(bot, msg, chatID, userID)
+		return
+	}
+
+	// Обработка состояний
 	switch state {
 	case "register":
 		registerPlayer(bot, msg, DB)
+	case "update_name", "update_patronymic", "update_surname", "update_height", "update_weight", "update_position":
+		UpdatePlayer(bot, msg, DB, userStates, temporaryData)
 	case "create_team_name":
 		CreateTeamName(bot, chatID, msg, int(userID), userStates, DB)
 	default:
+		// Если состояние неизвестно, сбрасываем его
+		delete(userStates, userID)
 		processCommand(bot, msg, chatID, userID)
 	}
 }
@@ -83,7 +99,9 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		userStates[userID] = "register"
 		registerPlayer(bot, msg, DB)
 	case "/profile":
-		listProfile(bot, chatID, DB)
+		ListProfile(bot, chatID, DB)
+	case "/update_profile":
+		UpdatePlayer(bot, msg, DB, userStates, temporaryData)
 	case "/teams":
 		ListTeams(bot, chatID, DB)
 	case "/create_team":
@@ -92,7 +110,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		logout(bot, chatID, userID)
 	case "/players":
 		if len(commandParts) < 2 {
-			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ," +
+			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ,"+
 				" либо /players_all	если хотите получить всех игроков без команды"))
 		} else {
 			teamName := strings.TrimSpace(commandParts[1])
@@ -139,7 +157,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 		matchID, _ := strconv.Atoi(commandParts[1])
 		match := GetMatchByID(DB, matchID)
-		if match != nil {
+		if match == nil {
 			bot.Send(tgbotapi.NewMessage(chatID, "матч не найден"))
 			return
 		}
@@ -270,6 +288,7 @@ func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
 	message := "Добро пожаловать!\n\n" +
 		"Вот список доступных команд:\n" +
 		"- /profile - Просмотреть свой профиль\n" +
+		"- /update_profile - Обновить профиль\n" +
 		"- /register - Зарегистрироваться как игрок\n" +
 		"- /teams - Просмотреть команды и вступить\n" +
 		"- /players - Просмотреть игроков определенной команды\n" +
@@ -322,7 +341,30 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 			bot.Send(tgbotapi.NewMessage(chatID, "Имя должно быть длиннее 1 символа. Попробуйте снова."))
 			return
 		}
-		setTemporaryData(userID, "name", msg.Text)
+		SetTemporaryData(userID, "first_name", msg.Text, temporaryData)
+		userStates[userID] = "register_patronymic"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваше отчество:"))
+
+	case "register_patronymic":
+		if len(msg.Text) < 2 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Отчество должно быть длиннее 1 символа. Попробуйте снова."))
+			return
+		}
+		SetTemporaryData(userID, "patronymic", msg.Text, temporaryData)
+		userStates[userID] = "register_last_name"
+		bot.Send(tgbotapi.NewMessage(chatID, "Введите вашу фамилию:"))
+
+	case "register_last_name":
+		if len(msg.Text) < 2 {
+			bot.Send(tgbotapi.NewMessage(chatID, "Фамилия должна быть длиннее 1 символа. Попробуйте снова."))
+			return
+		}
+		SetTemporaryData(userID, "last_name", msg.Text, temporaryData)
+
+		tempData := GetTemporaryData(userID, temporaryData)
+		fullName := fmt.Sprintf("%s %s %s", tempData["first_name"], tempData["patronymic"], tempData["last_name"])
+		SetTemporaryData(userID, "name", fullName, temporaryData)
+
 		userStates[userID] = "register_height"
 		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш рост (см):"))
 
@@ -332,7 +374,7 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 			bot.Send(tgbotapi.NewMessage(chatID, "Укажите корректный рост в сантиметрах (от 100 до 250)."))
 			return
 		}
-		setTemporaryData(userID, "height", strconv.Itoa(height))
+		SetTemporaryData(userID, "height", strconv.Itoa(height), temporaryData)
 		userStates[userID] = "register_weight"
 		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш вес (кг):"))
 
@@ -342,7 +384,7 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 			bot.Send(tgbotapi.NewMessage(chatID, "Укажите корректный вес в килограммах (от 30 до 200)."))
 			return
 		}
-		setTemporaryData(userID, "weight", strconv.Itoa(weight))
+		SetTemporaryData(userID, "weight", strconv.Itoa(weight), temporaryData)
 		userStates[userID] = "register_position"
 		bot.Send(tgbotapi.NewMessage(chatID, "Введите вашу игровую позицию (например, Центровой, Разыгрывающий):"))
 
@@ -351,19 +393,29 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 			bot.Send(tgbotapi.NewMessage(chatID, "Позиция должна содержать хотя бы 3 символа. Попробуйте снова."))
 			return
 		}
-		setTemporaryData(userID, "position", msg.Text)
+		SetTemporaryData(userID, "position", msg.Text, temporaryData)
 		userStates[userID] = "register_contact"
-		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваш контакт (например, номер телефона или email):"))
+
+		// Клавиатура для отправки контакта
+		contactButton := tgbotapi.NewKeyboardButtonContact("Поделиться контактом")
+		replyMarkup := tgbotapi.NewReplyKeyboard(
+			tgbotapi.NewKeyboardButtonRow(contactButton),
+		)
+		message := tgbotapi.NewMessage(chatID, "Поделитесь вашим контактом через кнопку ниже:")
+		message.ReplyMarkup = replyMarkup
+		bot.Send(message)
 
 	case "register_contact":
-		if len(msg.Text) < 5 {
-			bot.Send(tgbotapi.NewMessage(chatID, "Контактная информация должна содержать хотя бы 5 символов. Попробуйте снова."))
+		// Проверка на наличие контакта в сообщении
+		if msg.Contact == nil {
+			bot.Send(tgbotapi.NewMessage(chatID, "Пожалуйста, используйте кнопку 'Поделиться контактом'."))
 			return
 		}
-		setTemporaryData(userID, "contact", msg.Text)
+
+		SetTemporaryData(userID, "contact", fmt.Sprintf("Номер телефона - %s\nTgID - @%s", msg.Contact.PhoneNumber, msg.From.UserName), temporaryData)
 
 		// Создание игрока в базе данных
-		tempData := getTemporaryData(userID)
+		tempData := GetTemporaryData(userID, temporaryData)
 		height, _ := strconv.Atoi(tempData["height"])
 		weight, _ := strconv.Atoi(tempData["weight"])
 
@@ -384,38 +436,18 @@ func registerPlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, DB *gorm.DB) {
 		}
 
 		// Сброс состояния пользователя
-		deleteTemporaryData(userID)
+		DeleteTemporaryData(userID, temporaryData)
 		delete(userStates, userID)
 
-		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок %s успешно зарегистрирован!", player.Name)))
+		// Удаляем клавиатуру после завершения
+		msgClearKeyboard := tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок %s успешно зарегистрирован!", player.Name))
+		msgClearKeyboard.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
+		bot.Send(msgClearKeyboard)
+
 	default:
 		userStates[userID] = "register_name"
 		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваше имя:"))
 	}
-}
-
-// Хранилище временных данных для пользователя
-var temporaryData = make(map[int64]map[string]string)
-
-// Установка временных данных
-func setTemporaryData(userID int64, key, value string) {
-	if _, exists := temporaryData[userID]; !exists {
-		temporaryData[userID] = make(map[string]string)
-	}
-	temporaryData[userID][key] = value
-}
-
-// Получение временных данных
-func getTemporaryData(userID int64) map[string]string {
-	if data, exists := temporaryData[userID]; exists {
-		return data
-	}
-	return make(map[string]string)
-}
-
-// Удаление временных данных
-func deleteTemporaryData(userID int64) {
-	delete(temporaryData, userID)
 }
 
 // Выход из аккаунта
@@ -430,13 +462,13 @@ func logout(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
 
 	// Очистка временных данных и состояния пользователя
 	delete(userStates, userID)
-	deleteTemporaryData(userID)
+	DeleteTemporaryData(userID, temporaryData)
 
 	bot.Send(tgbotapi.NewMessage(chatID, "Вы успешно вышли из аккаунта. Для повторной регистрации используйте команду /register."))
 }
 
 // Просмотр профиля
-func listProfile(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
+func ListProfile(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
 	var player models.Player
 
 	err := DB.Where("chat_id = ?", chatID).First(&player).Error
@@ -448,80 +480,4 @@ func listProfile(bot *tgbotapi.BotAPI, chatID int64, DB *gorm.DB) {
 	message := fmt.Sprintf("Имя: %s\nРост: %d см\nВес: %d кг\nПозиция: %s\nКонтакты: %s",
 		player.Name, player.Height, player.Weight, player.Position, player.Contact)
 	bot.Send(tgbotapi.NewMessage(chatID, message))
-}
-
-// func viewStatistics(bot *tgbotapi.BotAPI, chatID int64) {
-// 	var player models.Player
-// 	err := DB.Where("chat_id = ?", chatID).Preload("Team").First(&player).Error
-// 	if err != nil {
-// 		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
-// 		return
-// 	}
-
-// 	var stats []models.MatchStatistics
-// 	err = DB.Where("player_id = ?", player.ID).Find(&stats).Error
-// 	if err != nil {
-// 		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при получении статистики. Попробуйте позже."))
-// 		log.Printf("Ошибка получения статистики: %v", err)
-// 		return
-// 	}
-
-// 	totalPoints, totalAssists, totalRebounds := 0, 0, 0
-// 	for _, stat := range stats {
-// 		totalPoints += stat.Points
-// 		totalAssists += stat.Assists
-// 		totalRebounds += stat.Rebounds
-// 	}
-
-// 	message := fmt.Sprintf("Статистика игрока %s:\nОчки: %d\nПередачи: %d\nПодборы: %d",
-// 		player.Name, totalPoints, totalAssists, totalRebounds)
-
-// 	if player.Team != nil {
-// 		message += fmt.Sprintf("\nКоманда: %s", player.Team.Name)
-// 	}
-
-// 	bot.Send(tgbotapi.NewMessage(chatID, message))
-// }
-
-func updateProfile(bot *tgbotapi.BotAPI, chatID int64, userID int64) {
-	var player models.Player
-	err := DB.Where("chat_id = ?", chatID).First(&player).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы еще не зарегистрированы. Используйте /register."))
-		return
-	}
-
-	userStates[userID] = "update_profile"
-	bot.Send(tgbotapi.NewMessage(chatID, "Введите новые данные профиля в формате:\nРост (см), Вес (кг), Позиция"))
-}
-
-func processUpdateProfile(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
-	input := strings.Split(msg.Text, ",")
-	if len(input) != 3 {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Неверный формат. Попробуйте снова: Рост (см), Вес (кг), Позиция"))
-		return
-	}
-
-	height, err1 := strconv.Atoi(strings.TrimSpace(input[0]))
-	weight, err2 := strconv.Atoi(strings.TrimSpace(input[1]))
-	position := strings.TrimSpace(input[2])
-
-	if err1 != nil || err2 != nil || len(position) < 3 {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Неверные данные. Убедитесь, что указаны корректные значения."))
-		return
-	}
-
-	var player models.Player
-	err := DB.Where("chat_id = ?", msg.Chat.ID).First(&player).Error
-	if err != nil {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Ошибка: Профиль не найден."))
-		return
-	}
-
-	player.Height = height
-	player.Weight = weight
-	player.Position = position
-
-	DB.Save(&player)
-	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Профиль обновлен!"))
 }

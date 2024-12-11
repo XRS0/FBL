@@ -192,3 +192,65 @@ func ListPlayersByTeam(bot *tgbotapi.BotAPI, chatID int64, teamName string, DB *
 
 	bot.Send(tgbotapi.NewMessage(chatID, message))
 }
+
+func DeleteTeamByName(DB *gorm.DB, bot *tgbotapi.BotAPI, chatID int64, teamName string) {
+	if DB == nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "База данных не инициализирована."))
+		return
+	}
+
+	var team models.Team
+	err := DB.Where("name = ?", teamName).First(&team).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Команда с именем '%s' не найдена.", teamName)))
+		} else {
+			bot.Send(tgbotapi.NewMessage(chatID, "Произошла ошибка при поиске команды. Попробуйте снова позже."))
+			log.Printf("Ошибка при поиске команды: %v", err)
+		}
+		return
+	}
+
+	err = DB.Delete(&team).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Произошла ошибка при удалении команды. Попробуйте снова позже."))
+		log.Printf("Ошибка при удалении команды: %v", err)
+		return
+	}
+
+	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Команда '%s' успешно удалена.", teamName)))
+}
+
+func RemovePlayerFromTeam(DB *gorm.DB, bot *tgbotapi.BotAPI, chatID int64, playerName string) {
+	if DB == nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "База данных не инициализирована."))
+		return
+	}
+
+	var player models.Player
+	err := DB.Where("name = ?", playerName).First(&player).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок с именем '%s' не найден.", playerName)))
+		} else {
+			bot.Send(tgbotapi.NewMessage(chatID, "Произошла ошибка при поиске игрока. Попробуйте снова позже."))
+			log.Printf("Ошибка при поиске игрока: %v", err)
+		}
+		return
+	}
+
+	if player.TeamID == nil {
+		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок '%s' уже не состоит ни в одной команде.", playerName)))
+		return
+	}
+
+	player.TeamID = nil
+	err = DB.Save(&player).Error
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "Произошла ошибка при удалении игрока из команды. Попробуйте снова позже."))
+		log.Printf("Ошибка при обновлении данных игрока: %v", err)
+		return
+	}
+
+	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок '%s' успешно удалён из команды.", playerName)))
+}

@@ -38,8 +38,8 @@ func main() {
 	DB = InitDatabase()
 	go StartWS(DB)
 
-	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
-	// bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
+	//bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
+	bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
 	if err != nil {
 		log.Fatalf("Не удалось инициализировать бота: %v", err)
 	}
@@ -74,7 +74,7 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 
 	// Обработка состояний
 	switch state {
-	case "register":
+	case "register_name", "register_patronymic", "register_last_name", "register_height", "register_weight", "register_position", "register_contact":
 		registerPlayer(bot, msg, DB)
 	case "update_name", "update_patronymic", "update_surname", "update_height", "update_weight", "update_position":
 		UpdatePlayer(bot, msg, DB, userStates, temporaryData)

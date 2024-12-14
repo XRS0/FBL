@@ -134,6 +134,12 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 				}
 			}
 
+			if wins-losses < 0 {
+				points = 0
+			} else {
+				points = wins - losses
+			}
+
 			results = append(results, TeamStatistics{
 				Name:   team.Name,
 				Games:  games,

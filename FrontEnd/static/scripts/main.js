@@ -135,6 +135,8 @@ async function fetchStatistics() {
         }
 
         const statistics = await response.json();
+        statistics.sort((a, b) => b.points - a.points)
+
         updateStatisticsContainer(statistics);
     } catch (error) {
         console.error("Ошибка загрузки статистики:", error);
@@ -255,7 +257,6 @@ function wrapMatches(container, date, location) {
             </div>
         </div>
     `;
-    
     return assembledContainer;
 }
 

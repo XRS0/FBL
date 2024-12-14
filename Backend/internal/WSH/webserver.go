@@ -139,7 +139,7 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 				Games:  games,
 				Wins:   wins,
 				Losses: losses,
-				Points: points,
+				Points: wins - points,
 			})
 		}
 

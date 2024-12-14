@@ -38,8 +38,8 @@ func main() {
 	DB = InitDatabase()
 	go StartWS(DB)
 
-	//bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
-	bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
+	bot, err := tgbotapi.NewBotAPI("7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY")
+	//bot, err := tgbotapi.NewBotAPI("6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI")
 	if err != nil {
 		log.Fatalf("Не удалось инициализировать бота: %v", err)
 	}
@@ -140,7 +140,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		team2ID, _ := strconv.Atoi(args[1])
 		date, err := time.Parse(time.DateTime, fmt.Sprint(args[2]+" "+args[3]))
 		if err != nil {
-			fmt.Println("Пошел ты нахер козел")
+			fmt.Println("Матч не создан, че то пошло не так")
 		}
 		location := args[4]
 		match, err := CreateMatch(DB, uint(team1ID), uint(team2ID), date, location)

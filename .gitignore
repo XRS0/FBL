@@ -1,0 +1,3 @@
+*.env
+/Backend/config/config.yaml
+backup.sql

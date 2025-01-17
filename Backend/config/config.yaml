@@ -1,0 +1,10 @@
+tg_api_token: "6942168243:AAGtBiMeTWDtHJNxeCkqT2SnA1qSHMQTimI"
+host: "localhost"
+userdb: "admin"
+dbname: "basketball_league"
+passworddb: "password"
+admins:
+  - 1324977667
+  - 984866387
+  - 1655151699
+# tg_api_token: "7945815181:AAHAzN3QI5dUtq7iSmw9if2rrA5Rzi2j3bY"

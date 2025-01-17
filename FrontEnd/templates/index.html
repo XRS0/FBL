@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000"/>
+    <title>Fast Break League</title>
+    <link rel="stylesheet" href="../static/styles/main.css">
+    <link rel="stylesheet" href="../static/styles/media.css">
+    <link rel="stylesheet" href="../static/styles/animations&add-styles.css">
+    <link rel="shortcut icon" href="../assets/icons/Favicon.svg" type="image/x-icon">
+</head>
+<body>
+    <header class="header">
+        <div class="header-container">
+            <div class="header-content">
+                <div class="navigation-bar">
+                    <div class="blue-square-indicator"></div>
+                    <div class="burger-menu-icon">
+                        <img src="../assets/icons/Burger-menu.svg" alt="burger" class="">
+                    </div>
+                    <div>ГЛАВНАЯ</div>
+                    <div class="hide-content" id="matches" onclick="animateNavbar('matches')">МАТЧИ</div>
+                    <div class="hide-content" id="statistics" onclick="animateNavbar('statistics')">СТАТИСТИКА</div>
+                    <!-- <div class="hide-content" id="teams" onclick="animateNavbar('teams')">КОМАНДЫ</div> -->
+                    <div class="hide-content" id="profile" onclick="animateNavbar('profile')">ПРОФИЛЬ</div>
+                </div>
+                
+                <div class="header-title">
+                    <img src="../assets/images/Header-title.png" alt="fbl" class="header-text">
+                    <img src="../assets/icons/Header-arrow.svg" alt="arrow" class="header-arrow">
+                </div>
+            </div>  
+        </div>
+    </header>
+
+    <div class="popup-menu">
+        <div class="popup-text">
+            <div style="color: #3F6FFF; font-size: 22px;" id="burger-main">ГЛАВНАЯ</div>
+            <div onclick="scrollDown('matches')">МАТЧИ</div>
+            <div onclick="scrollDown('statistics')">СТАТИСТИКА</div>
+            <div onclick="scrollDown('teams')">КОМАНДЫ</div>
+            <div onclick="scrollDown('profile')" id="burger-profile" style="width: max-content;">ПРОФИЛЬ</div>
+        </div>     
+        <div style="height: max-content;" onclick="closeOnClick()">
+            <img src="../assets/icons/burger-close.svg" alt="close">
+        </div>
+    </div>
+
+    <main>
+        <div class="container">
+            <div class="fbl-note">F<span style="color: #3F6FFF">B</span>L</div>
+            <img src="../assets/images/Background-playground.png" alt="background_Playground" class="back-paygr">
+            <div class="welcome-block">
+                <div class="small-welcome-text">БАСКЕТБОЛЬНАЯ ЛИГА</div>
+                <div class="main-welcome-text">FAST BREAK LEAGUE</div>
+                <p>
+                    Добро пожаловать в нашу любительскую баскетбольную лигу! Здесь мы создаем
+                    уникальную атмосферу, где командный дух и стремление к победе играют ключевую роль.
+                    Наша лига ориентирована на проведение быстрых и захватывающих матчей между командами,
+                    обеспечивая минимализм в организации. Мы стремимся мотивировать участников к здоровой
+                    конкуренции и развитию своих навыков на корте, предоставляя возможность каждому игроку
+                    испытать настоящий азарт игры. Присоединяйтесь к нам и станьте частью динамичной
+                    баскетбольной команды! 
+                </p>
+                <div class="fillness-button" onclick="openRules()">ПРАВИЛА</div>
+            </div>
+
+            <div id="overlay" class="hiden-rules"></div>
+            <div id="rules-popup" class="hiden-rules">
+                <div class="rules-header">
+                    ПРАВИЛА И ОРГ. МОМЕНТЫ
+                </div>
+                <div onclick="closeRules()" class="close-rules">
+                    <img src="../assets/icons/burger-close.svg" alt="close">
+                </div>
+                <div class="rules-content">
+                    <h3>Правила Лиги</h3>
+                    <p>
+                        В нашей лиге действуют простые и удобные правила. В день игры команды
+                        проводят несколько матчей, иногда даже сталкиваясь с одной и той же командой.
+                        Каждое командное образование <span style="color: #3F6FFF;"><b>состоит из 5 до 8 человек</b></span>.
+                        <b>Регистрация команд и игроков</b> проходит легко через наш сайт, как и оплата за участие в матчах.
+                        Имейте в виду, что <i>количество сыгранных игр за сезон у команд может различаться.</i>
+                        <br>
+                        <br>
+                        В нашей лиге нет строгого расписания матчей — каждая команда <b>самостоятельно</b>
+                        регистрируется на игры. Рейтинговая таблица формируется на основе количества
+                        побед, где одна победа приносит команде одно очко. <span style="color: #3F6FFF;"><b>Стоимость участия в играх</b></span>
+                        зависит от аренды зала и расходов на дополнительный персонал, таких как судьи
+                        или трансляция матчей. Мы <i>рекомендуем</i> иметь форму одного цвета, а лучше два
+                        комплекта — например, черный и белый.
+                    </p>
+                    <h3>Правила Баскетбола</h3>
+                    <p>
+                        Мы придерживаемся <i>классических</i> правил баскетбола с некоторыми изменениями.
+                        Игра проходит только одну четверть длительностью <span style="color: #3F6FFF;"><b>10 минут</b></span> <b>грязного</b> времени,
+                        а <span style="color: #3F6FFF;"><b>последние две минуты</b></span> — <b>чистого.</b> Пауза берется <b>только</b> при штрафных бросках.
+                        В случае равного счета, устанавливается овертайм на две минуты, и так
+                        продолжается до выявления победителя. 
+                        <br>
+                        <br>
+                        Если заранее нанятых судей нет, две команды, участвующие в матче, <i>выбирают
+                        по одному судье из игроков,</i> которые не принимают участие в игре. Выбор роли
+                        <b>судьи</b> осуществляется по взаимной договоренности. Количество <i>персональных фолов</i>
+                        <span style="color: #3F6FFF;"><b>не ограничено</b></span><i>, однако командные фолы</i> – <span style="color: #3F6FFF;"><b>5</b></span>. Присоединяйтесь к нашим играм и
+                        ощутите атмосферу настоящего баскетбольного соревнования!
+                    </p>
+                    <div class="fillness-button" style="margin-bottom: 50px;" onclick="closeRules()">ПОНЯЛ</div>
+                </div>
+            </div>
+        </div>
+
+        <h1 class="matches-title">
+            <span style="color: #3F6FFF">М</span>АТЧ<span style="color: #3F6FFF">И</span>
+        </h1>
+
+        <div class="container" id="matches-container">
+            <div class="matches-info-bar">
+                <div>
+                    <h2 id="matches-date">07 декабря</h2>
+                    <h3 id="matches-location">Дивс</h3>
+                </div>
+                
+                <div class="matches-hint">
+                    Время проведения <br>
+                    Счет игры <br>
+                    Статус
+                </div>
+            </div>
+            <div class="separation-line"></div>
+            <div class="matches-block">
+                <div class="no-matches">Матчей пока нет</div>
+            </div>
+        </div>
+
+        <div class="container" id="statistics-container">
+            <div class="separation-line"></div>
+            <div class="statistics-block">
+                <div class="statistics">
+                    <div class="table-names">
+                        <div>Команда</div>
+                        <div class="centered-names">
+                            <div class="name-of-point">Игры</div>
+                            <div class="name-of-point">Победы</div>
+                            <div class="name-of-point">Поражения</div>
+                            <div class="name-of-point"><span style="color: #3F6FFF;">Очки</span></div>
+                        </div>
+
+                        <div class="centered-names-mobile centered-names" style="display: none;">
+                            <div class="name-of-point">G</div>
+                            <div class="name-of-point">W</div>
+                            <div class="name-of-point">L</div>
+                            <div class="name-of-point"><span style="color: #3F6FFF;">Pts</span></div>
+                        </div>
+                    </div>
+                    <div class="table-grid-rows">
+                        <div class="table-names table-cell" style="background-color: #3F6FFF; box-shadow: 0px 2px 20px rgba(0, 6, 0, 0.80);">
+                            <div class="team-info">
+                                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
+                                <div>Russian Wolf</div>
+                                <div class="hide-team-name">RW</div>
+                            </div>
+                            <div class="centered-points">
+                                <div class="name-of-point">2</div>
+                                <div class="name-of-point">2</div>
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point">6</div>
+                            </div>
+                        </div>
+    
+                        <div class="table-names table-cell" style="background-color: #2B2B2B;">
+                            <div class="team-info">
+                                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
+                                <div>British Bears</div>
+                                <div class="hide-team-name">BB</div>
+                            </div>
+                            <div class="centered-points">
+                                <div class="name-of-point">2</div>
+                                <div class="name-of-point">1</div>
+                                <div class="name-of-point">1</div>
+                                <div class="name-of-point"><span style="color: #3F6FFF;">3</span></div>
+                            </div>
+                        </div>
+    
+                        <div class="table-names table-cell" style="background-color: #1B1B1B;">
+                            <div class="team-info">
+                                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
+                                <div>Thumbnail Team</div>
+                                <div class="hide-team-name">TT</div>
+                            </div>
+                            <div class="centered-points">
+                                <div class="name-of-point">1</div>
+                                <div class="name-of-point">1</div>
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point"><span style="color: #3F6FFF;">3</span></div>
+                            </div>
+                        </div>
+
+                        <div class="table-names table-cell" style="border: 1px solid #343434;">
+                            <div class="team-info">
+                                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
+                                <div>Brazil Monkey</div>
+                                <div class="hide-team-name">BM</div>
+                            </div>
+                            <div class="centered-points">
+                                <div class="name-of-point">2</div>
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point">2</div>
+                                <div class="name-of-point"><span style="color: #3F6FFF;">0</span></div>
+                            </div>
+                        </div>
+
+                        <div class="table-names table-cell" style="border: 1px solid #343434;">
+                            <div class="team-info">
+                                <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
+                                <div>Vladivostok</div>
+                                <div class="hide-team-name">Vl</div>
+                            </div>
+                            <div class="centered-points">
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point">0</div>
+                                <div class="name-of-point"><span style="color: #3F6FFF;">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- <div class="container" id="teams-container">
+            <div class="separation-line"></div>
+
+            <div class="teams-block">
+                <div class="teams-grid-block">
+                    <div class="team-widget">
+                        <div class="team-info team-header">
+                            <img src="../assets/images/thumbnail.png" alt="ico" ">
+                            <div class="team-name"><span style="color: #FF1F62;">British Bear</span> Team</div>
+                        </div>
+
+                        <div class="separation-line" style="border: 1px solid #FF1F62; box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.9);"></div>
+                        
+                        <div class="players-grid">
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Bob Billboard</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">John Snow</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Dikon Sant</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Ali Bal</div>
+                            </div>
+
+                            <div class="player-card change-border">
+                                <div class=" join-team">
+                                    Вступить в <br>
+                                    команду
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="team-widget">
+                        <div class="team-info team-header">
+                            <img src="../assets/images/thumbnail.png" alt="ico" ">
+                            <div class="team-name"><span style="color: #3F6FFF;">Russian Wolf</span> Team</div>
+                        </div>
+
+                        <div class="separation-line" style="border: 1px solid #3F6FFF; box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.9);"></div>
+                        
+                        <div class="players-grid">
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Bob Billboard</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">John Snow</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Dikon Sant</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">Ali Bal</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">John Snow</div>
+                            </div>
+
+                            <div class="player-card">
+                                <img src="../assets/images/Player-thumbnail.png" alt="player">
+                                <div class="separation-line"></div>
+                                <div class="player-name">John Snow</div>
+                            </div>
+
+                            <div class="player-card change-border">
+                                <div class=" join-team">
+                                    Вступить в <br>
+                                    команду
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="matches-block">
+                <div class="fillness-button">СОЗДАТЬ КОМАНДУ</div>
+            </div>
+        </div> -->
+    </main>
+
+    <footer>
+        <div class="container">
+            <div class="fbl-note">F<span style="color: #3F6FFF">B</span>L</div>
+            <div class="separation-line"></div>
+            <div class="matches-block">
+                <div class="social-tg">
+                    <img src="../assets/icons/Tg-ico.svg" alt="tg" id="tg-ico">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../static/scripts/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,751 @@
+@media (max-width: 1510px) {
+    .teams-grid-block {
+        gap: 40px 50px;
+
+    }
+    .players-grid {
+        gap: 15px;
+        margin: 20px;
+    }
+
+    .player-name {
+        padding: 5% 0;
+    }
+
+    .team-header img {
+        width: 60px;
+    }
+
+    .player-card {
+        width: 90%;
+    }
+
+    .player-card img {
+        width: 90%;
+    }
+
+    #rules-popup {
+        width: 52%;
+    }
+}
+
+@media (max-width: 1400px) {
+    .teams-grid-block {
+        gap: 40px 4vw;
+    }
+    .players-grid {
+        width: 90%;
+        gap: 30px;
+        margin: 5%;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .team-name {
+        font-size: 2.5vw;
+    }
+}
+
+@media (max-width: 1200px) {
+    .header {
+        height: 78vw;
+        background-size: 150%;
+        background-repeat: repeat-x;
+        background-position: top;
+    }
+    .navigation-bar {
+        margin-top: 4vw;
+        font-size: 1.55vw;
+        height: 5vw;
+    }
+    .header-content {
+        margin-inline: 3vw;
+    }
+    .header-title {
+        margin-top: 10vh;
+    }
+    .header-text {
+        width: 67vw;
+    }
+    .header-arrow {
+        width: 6vh;
+    }
+    .blue-square-indicator {
+        width: 12.5vw;
+    }
+
+    .back-paygr {
+        width: 65vw;
+    }
+    .fbl-note {
+        font-size: 3vw;
+    }
+    .welcome-block {
+        padding: 5vw 0;
+        width: 75%;
+    }
+    .small-welcome-text {
+        font-size: 2.5vw;
+        width: max-content;
+    }
+    .main-welcome-text {
+        font-size: 4vw;
+        width: max-content;
+    }
+    .fillness-button {
+        font-size: 2vw;
+        width: max-content;
+    }
+    p {
+        font-size: 1.5vw;
+    }
+
+    h1 {
+        font-size: 5.5vw;
+    }
+
+    h2 {
+        font-size: 3.4vw;
+    }
+
+    h3 {
+        font-size: 2.4vw;
+    }
+
+    .matches-hint {
+        font-size: 85%;
+    }
+    .match-widget {
+        padding: 1.7% 2.5%;
+        align-items: center;
+    }
+    .match-widget img {
+        height: 85%;
+        aspect-ratio: 1 / 1;
+    }
+    .match-time {
+        font-size: 2vw;
+    }
+    .match-score {
+        font-size: 4vw;
+    }
+    .match-status {
+        font-size: 110%;
+    }
+
+    .statistics-block {
+        font-size: 2vw;
+    }
+
+    .players-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin: 5.2%;
+    }
+    .players-grid {
+        gap: 20px;
+    }
+    .player-name {
+        font-size: 1.6vw;
+    }
+    .join-team {
+        font-size: 1.6vw;
+    }
+
+    .teams-grid-block {
+        gap: 30px;
+    }
+
+    #rules-popup {
+        width: 62%;
+    }
+    .rules-header {
+        font-size: 2.7vw;
+    }
+    .close-rules {
+        top: 1.5vw;
+        right: 1.8vw;
+    }
+
+    .match-team-name {
+        height: 100%;
+        min-height: auto;
+        background-size: contain;
+    }
+}
+
+@media (max-width: 1000px) {
+    .container {
+        padding: 0 15px;
+        max-width: 1510px;
+    }
+
+    .header-title {
+        margin-top: 8vh;
+    }
+    .header-text {
+        width: 64vw;
+    }
+    .header-arrow {
+        width: 4vh;
+    }
+
+    .back-paygr {
+        width: 75vw;
+        bottom: 15px;
+    }
+
+    .fbl-note {
+        right: 1vw;
+    }
+    p {
+        font-size: 1.6vw;
+        line-height: 3vw;
+        margin: 2.5vw 0;
+    }
+    .fillness-button {
+        padding: 1vh 3vw;
+    }
+
+    .statistics-block {
+        padding-inline: 1.5%;
+    }
+    .centered-points {
+        font-size: 2.2vw;
+    }
+    .statistics {
+        margin: 5% 0;
+    }
+    .table-names {
+        padding: 0 3.65%;
+        margin-bottom: 3%;
+    }
+    .table-cell {
+        padding: 0.75vw 2.5vw;
+        padding-right: 2.3vw;
+        margin-bottom: 0;
+    }
+
+    .team-logo-margin {
+        margin-right: 12px;
+        width: 50px;
+    }
+
+    .match-widget img {
+        height: 70%;
+        aspect-ratio: 1 / 1;
+    }
+    .match-status {
+        font-size: 97%;
+    }
+
+    .teams-grid-block {
+        padding: 5% 0;
+    }
+
+    .social-tg {
+        width: 7vw !important;
+    }
+    #rules-popup {
+        width: 67%;
+        height: 90vh;
+    }
+    .rules-header {
+        font-size: 3vw;
+        padding: 1.4vw;
+    }
+    .rules-content {
+        -webkit-mask-image: linear-gradient(0deg, transparent 8px, #121212 50px);
+    }
+    .close-rules {
+        top: 1.8vw;
+        right: 2vw;
+    }
+}
+
+@media (max-width: 835px) {
+    .matches-grid-block {
+        grid-template-columns: 1fr;
+    }
+    .matches-block {
+        padding: 0 15%;
+    }
+    .match-widget img {
+        height: 94%;
+        aspect-ratio: 1 / 1;
+    }
+    .match-time {
+        font-size: 2.8vw;
+    }
+    .match-score {
+        font-size: 5.5vw;
+    }
+    .match-status {
+        font-size: 115%;
+    }
+
+    .match-team-name {
+        font-size: 4vw;
+    }
+
+    .team-info .match-team-name {
+        font-size: 1.6vw;
+        min-height: 5vw;
+        background-size: contain;
+        background-repeat: no-repeat;
+    }
+}
+
+@media (max-width: 768px) {
+    .navigation-bar {
+        margin-top: 5vw;
+        font-size: 1.8vw;
+        height: 6.5vw;
+        padding: 0 8px;
+        border: 3px solid var(--main-blue);
+    }
+    .header-title {
+        margin-top: 8vh;
+    }
+    .header-text {
+        width: 60vw;
+    }
+    .header-arrow {
+        width: 3.5vh;
+        margin-top: 5vh;
+    }
+    .blue-square-indicator {
+        width: 14vw;
+    }
+
+    .back-paygr {
+        display: none;
+    }
+    .welcome-block {
+        width: 100%;
+    }
+    p {
+        font-size: 2vw;
+        margin: 4vw 0;
+    }
+    .small-welcome-text {
+        font-size: 3.5vw;
+        width: max-content;
+        border: 4px solid var(--main-blue);
+    }
+    .main-welcome-text {
+        font-size: 5.5vw;
+        width: max-content;
+    }
+    .fillness-button {
+        font-size: 3vw;
+        width: max-content;
+        outline: 3px solid var(--main-blue);
+        outline-offset: -3px;
+    }
+
+    .matches-hint {
+        font-size: 72%;
+        text-underline-offset: 2px;
+        text-decoration-thickness: 1px;
+        line-height: 2.7vw;
+    }
+
+    .matches-info-bar {
+        margin-bottom: 10px;
+    }
+
+    .matches-grid-block {
+        margin: 8% 0;
+        gap: 25px;
+    }
+
+    .match-widget {
+        padding: 1.7% 2.5%;
+        align-items: center;
+    }
+
+    .matches-block {
+        padding: 0 8%;
+    }
+
+    .match-widget img {
+        height: 90%;
+        aspect-ratio: 1 / 1;
+    }
+
+    .match-time {
+        font-size: 3.5vw;
+    }
+    
+    .match-score {
+        font-size: 6.7vw;
+        padding: 3% 0;
+    }
+    
+    .match-status {
+        font-size: 110%;
+    }
+
+    .statistics-block {
+        padding-inline: 1%;
+        font-size: 2.2vw;
+    }
+    .statistics {
+        margin: 5% 0;
+    }
+    .table-grid-rows {
+        gap: 12px 0;
+    }
+    .team-logo-margin {
+        margin-right: 10px;
+        width: 40px;
+    }
+    .centered-points {
+        font-size: 2.4vw;
+    }
+    .table-names {
+        padding: 2% 3.65%;
+        margin-bottom: 3%;
+    }
+    .table-cell {
+        padding: 0.70vw 2.2vw;
+        padding-right: 2.3vw;
+        margin-bottom: 0;
+    }
+    .teams-grid-block {
+        grid-template-columns: 1fr;
+    }
+    .team-name {
+        font-size: 4vw;
+    }
+    .players-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+    .players-grid {
+        gap: 20px;
+        margin: 5%;
+        /* justify-items: center; */
+    }
+    .player-name {
+        padding: 5% 0;
+    }
+    .team-header img {
+        width: 60px;
+    }
+    .player-card {
+        width: 90%;
+    }
+    .player-card img {
+        width: 90%;
+    }
+
+    .social-tg {
+        width: 9vw !important;
+    }
+
+    #rules-popup {
+        width: 78%;
+    }
+    .rules-header {
+        font-size: 3.5vw;
+        padding: 1.5vw;
+    }
+    .close-rules {
+        top: 2vw;
+        right: 2.3vw;
+    }
+
+    .no-matches {
+        font-size: 4vw;
+    }
+}
+
+@media (max-width: 600px) {
+    .matches-block {
+        padding: 0 6%;
+    }
+
+    .match-widget {
+        padding: 0.5% 2%;
+    }
+
+    .match-widget img {
+        height: 75%;
+        aspect-ratio: 1 / 1;
+    }
+
+    .match-time {
+        font-size: 3.5vw;
+    }
+    
+    .match-score {
+        font-size: 5.5vw;
+    }
+    
+    .match-status {
+        font-size: 97%;
+    }
+
+    .team-widget {
+        max-width: 370px;
+        border-radius: 15px;
+    }
+    .team-header {
+        margin: 0;
+        padding: 5px 10px;
+    }
+    .team-header img {
+        width: 42px;
+        margin-right: 12px;
+    }
+    .team-name {
+        font-size: 19px;
+    }
+    .players-grid {
+        gap: 20px 15px;
+        margin: 15px;
+        justify-items: center;
+    }
+    .player-card {
+        border-radius: 10px;
+        width: 95px;
+    }
+    .change-border {
+        outline: 2px solid var(--main-blue);
+        outline-offset: -2px;
+    }
+    p {
+        font-size: 13px;
+        line-height: 18px;
+    }
+
+    footer {
+        padding: 12vw 0 5vw;
+    }
+    footer img {
+        width: 15%;
+    }
+    .social-tg {
+        margin-top: 8vw;
+        width: 10vw !important;
+    }
+
+    #rules-popup {
+        width: 85%;
+        height: 80vh;
+    }
+    #rules-popup .fillness-button {
+        margin-bottom: 3.2vw !important;
+    }
+    .rules-header {
+        font-size: 4vw;
+        padding: 2vw;
+    }
+    .rules-content {
+        padding: 0 17px;
+        -webkit-mask-image: linear-gradient(0deg, transparent 0px, #121212 40px);
+    }
+    .close-rules {
+        top: 2.7vw;
+        right: 2.8vw;
+    }
+
+    .matches-title {
+        font-size: 9vw;
+        margin-top: 2vw;
+    }
+
+    .match-team-name {
+        height: 90%;
+        min-height: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .header {
+        width: 100%;
+        height: 120vw;
+        background-size: 240%;
+    }
+    .header-content {
+        margin-inline: 0;
+    }
+    .navigation-bar {
+        margin-top: 5vw;
+        font-size: 3vw;
+        height: 9vw;
+        padding: 0 5px;
+        border: 2px solid var(--main-blue);
+    }
+    .burger-menu-icon {
+        display: block;
+    }
+    .popup-menu {
+        display: flex;
+    }
+    
+    .hide-content {
+        display: none;
+    }
+    .blue-square-indicator {
+        width: 22vw;
+    }
+    .header-text {
+        width: 85vw;
+    }
+    .header-arrow {
+        width: 8vw;
+        margin-top: 12vh;
+    }
+
+    .container {
+        margin: 0;
+    }
+
+    .small-welcome-text {
+        font-size: 4vw;
+        padding: 0.5vw 1vw;
+        margin: 8px 0;
+        border: 2px solid var(--main-blue);
+    }
+    .main-welcome-text {
+        font-size: 6.5vw;
+        padding: 0.5vw 1.5vw;
+    }
+    p {
+        font-size: 12px;
+        line-height: 20px;
+    }
+    .fbl-note {
+        display: none;
+    }
+    .fillness-button {
+        font-size: 20px;
+        padding: 10px 17px;
+    }
+
+    h1{
+        font-size: 8.5vw;
+        margin: 20px 0;
+    }
+    h2 {
+        font-size: 4.5vw;
+    }
+    h3{
+        font-size: 3.8vw;
+    }
+    .matches-hint {
+        font-size: 8px;
+        text-underline-offset: 2px;
+        text-decoration-thickness: 1px;
+        line-height: 14px;
+    }
+    .matches-block {
+        padding: 0;
+    }
+    .matches-grid-block {
+        gap: 20px;
+        margin: 5% 0;
+    }
+    .match-widget {
+        padding: 8px;
+        border-radius: 15px;
+    }
+    .match-widget img {
+        height: 80px;
+    }
+
+    .match-time {
+        font-size: 15px;
+    }
+    .match-score {
+        font-size: 28px;
+    }
+    .match-status {
+        font-size: 12px;
+    }
+
+    .statistics-block {
+        padding: 0;
+    }
+    .statistics {
+        font-size: 14px;
+    }
+    .hide-team-name {
+        display: block;
+    }
+
+    .table-grid-rows {
+        gap: 7px;
+    }
+    .table-names {
+        padding: 0 5px;
+    }
+    .table-cell {
+        padding: 5px 10px;
+    }
+    .team-info img {
+        width: 30px;
+    }
+
+    .centered-names-mobile {
+        display: flex !important;
+    }
+    .centered-points {
+        font-size: 14px;
+        width: 70%;
+    }
+    .centered-names {
+        display: none;
+    }
+
+    .team-info div {
+        display: none;
+    }
+    .hide-team-name {
+        display: block !important;
+    }
+
+    .team-name {
+        display: block !important;
+    }
+
+    .social-tg {
+        margin: 6vw 0;
+    }
+
+    footer {
+        background-size: auto;
+    }
+
+    #rules-popup {
+        width: 92%;
+        height: 60%;
+        border: 1px solid #292929;
+    }
+    #rules-popup .fillness-button {
+        margin-bottom: 5vw !important;
+    }
+    #rules-popup p {
+        margin-top: 2vw;
+    }
+    .rules-header {
+        font-size: 4vw;
+        padding: 3vw;
+        width: 88%;
+    }
+    .rules-content {
+        padding: 20px 15px 0;
+        -webkit-mask-image: linear-gradient(0deg, transparent 0px, #121212 30px);
+    }
+    .close-rules {
+        top: 3vw;
+        right: 3.6vw;
+        width: 5%;
+    }
+
+    .match-team-name {
+        height: 100%;
+        font-size: 5vw;
+    }
+}

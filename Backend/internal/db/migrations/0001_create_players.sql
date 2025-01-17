@@ -8,6 +8,7 @@ DO $$ BEGIN
             position VARCHAR(50) NOT NULL,
             chat_id BIGINT UNIQUE NOT NULL,
             contact VARCHAR(255),
+            number SMALLINT NOT NULL,
             team_id INTEGER REFERENCES teams(id) ON DELETE SET NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

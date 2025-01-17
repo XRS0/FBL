@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"basketball-league/config"
+	capH "basketball-league/internal/CapitanHandlers"
 	wsh "basketball-league/internal/WSH"
-	. "basketball-league/internal/db"
+	dbpkg "basketball-league/internal/db"
 	mtH "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
 	tmH "basketball-league/internal/teamHandlers"
@@ -22,6 +23,7 @@ type HandlersConfig struct {
 	mhHandler mtH.Handler
 	tmHandler tmH.Handler
 	usHandler usH.Handler
+  cpHandler capH.Handler
 }
 
 var cfg config.Config
@@ -46,9 +48,13 @@ func main() {
     return;
 	}
 
-	var DB = InitDatabase(cfg)
-	Handler.mhHandler.Handler, Handler.tmHandler.Handler, Handler.usHandler.Handler = models.Handler{DB: DB}, models.Handler{DB: DB}, models.Handler{DB: DB}
-	go wsh.StartWS(DB)
+	var DB = dbpkg.InitDatabase(cfg)
+
+  Handler.mhHandler.Handler = models.Handler{DB: DB}
+  Handler.tmHandler.Handler = models.Handler{DB: DB}
+  Handler.usHandler.Handler = models.Handler{DB: DB}
+  Handler.cpHandler.Handler = models.Handler{DB: DB}
+  go wsh.StartWS(DB)
 
 	bot, err := tgbotapi.NewBotAPI(cfg.TgApiToken)
 	if err != nil {
@@ -74,11 +80,9 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
-	// Получаем текущее состояние пользователя
 	state, exists := userStates[userID]
 
 	if !exists {
-		// Если состояния нет, проверяем команду
 		processCommand(bot, msg, chatID, userID)
 		return
 	}
@@ -91,8 +95,8 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		Handler.usHandler.UpdatePlayer(bot, msg, userStates, temporaryData)
 	case "create_team_name":
 		Handler.tmHandler.CreateTeamName(bot, chatID, msg, int(userID), userStates)
-	case "rename_team":
-		Handler.tmHandler.RenameTeam(bot, msg, userStates)
+	case "join_team":
+    Handler.tmHandler.JoinTeam(bot, chatID, msg.Text, userStates)
 	default:
 		// Если состояние неизвестно, сбрасываем его
 		delete(userStates, userID)
@@ -117,8 +121,6 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		Handler.usHandler.UpdatePlayer(bot, msg, userStates, temporaryData)
 	case "/teams":
 		Handler.tmHandler.ListTeams(bot, chatID)
-	//case "/rename_team":
-	//	RenameTeam(bot, msg, DB, userStates)
 	case "/create_team":
 		Handler.tmHandler.CreateTeam(bot, chatID, int(userID), userStates)
 	case "/logout":
@@ -289,7 +291,7 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 
 	default:
 		if strings.HasPrefix(msg.Text, "/join_team") {
-			Handler.tmHandler.JoinTeam(bot, chatID, msg.Text)
+			Handler.tmHandler.JoinTeam(bot, chatID, msg.Text, userStates)
 		} else if strings.HasPrefix(userStates[userID], "register") {
 			Handler.usHandler.RegisterPlayer(bot, temporaryData, userStates, msg)
 		} else {

@@ -41,7 +41,6 @@ func (h *Handler) UpdatePlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, user
 		return
 	}
 
-	// Состояние обновления данных
 	state := userStates[userID]
 	switch state {
 	case "update_name":
@@ -98,7 +97,6 @@ func (h *Handler) UpdatePlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, user
 		}
 		SetTemporaryData(userID, "position", msg.Text, temporaryData)
 
-		// Сбор данных для обновления
 		tempData := GetTemporaryData(userID, temporaryData)
 		fullName := fmt.Sprintf("%s %s %s", tempData["name"], tempData["patronymic"], tempData["surname"])
 		height, _ := strconv.Atoi(tempData["height"])
@@ -111,7 +109,6 @@ func (h *Handler) UpdatePlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, user
 			Position: tempData["position"],
 		}
 
-		// Обновление полей игрока, кроме TeamID
 		err := h.DB.Model(&existingPlayer).Updates(updatedPlayer).Error
 		if err != nil {
 			bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при обновлении данных. Попробуйте снова позже."))
@@ -119,7 +116,6 @@ func (h *Handler) UpdatePlayer(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, user
 			return
 		}
 
-		// Сброс временных данных и состояния
 		DeleteTemporaryData(userID, temporaryData)
 		delete(userStates, userID)
 
@@ -135,7 +131,6 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 	chatID := msg.Chat.ID
 	userID := msg.From.ID
 
-	// Инициализация данных пользователя, если ранее не была начата регистрация
 	if _, exists := userStates[userID]; !exists {
 		userStates[userID] = "register_name"
 		bot.Send(tgbotapi.NewMessage(chatID, "Введите ваше имя:"))
@@ -145,7 +140,6 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 	var existingPlayer models.Player
 	err := h.DB.Where("chat_id = ?", chatID).First(&existingPlayer).Error
 	if err == nil {
-		// Если игрок найден в базе данных, сообщаем о том, что он уже зарегистрирован
 		bot.Send(tgbotapi.NewMessage(chatID, "Вы уже зарегистрированы в системе!"))
 		userStates[userID] = ""
 		return
@@ -224,7 +218,6 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 		bot.Send(message)
 
 	case "register_contact":
-		// Проверка на наличие контакта в сообщении
 		if msg.Contact == nil {
 			bot.Send(tgbotapi.NewMessage(chatID, "Пожалуйста, используйте кнопку 'Поделиться контактом'."))
 			return
@@ -232,7 +225,6 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 
 		SetTemporaryData(userID, "contact", fmt.Sprintf("Номер телефона - %s\nTgID - @%s", msg.Contact.PhoneNumber, msg.From.UserName), temporaryData)
 
-		// Создание игрока в базе данных
 		tempData := GetTemporaryData(userID, temporaryData)
 		height, _ := strconv.Atoi(tempData["height"])
 		weight, _ := strconv.Atoi(tempData["weight"])
@@ -253,11 +245,9 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 			return
 		}
 
-		// Сброс состояния пользователя
 		DeleteTemporaryData(userID, temporaryData)
 		delete(userStates, userID)
 
-		// Удаляем клавиатуру после завершения
 		msgClearKeyboard := tgbotapi.NewMessage(chatID, fmt.Sprintf("Игрок %s успешно зарегистрирован!", player.Name))
 		msgClearKeyboard.ReplyMarkup = tgbotapi.NewRemoveKeyboard(true)
 		bot.Send(msgClearKeyboard)
@@ -268,7 +258,6 @@ func (h *Handler) RegisterPlayer(bot *tgbotapi.BotAPI, temporaryData map[int64]m
 	}
 }
 
-// Просмотр профиля
 func (h *Handler) ListProfile(bot *tgbotapi.BotAPI, chatID int64) {
 	var player models.Player
 
@@ -278,12 +267,11 @@ func (h *Handler) ListProfile(bot *tgbotapi.BotAPI, chatID int64) {
 		return
 	}
 
-	message := fmt.Sprintf("Имя: %s\nРост: %d см\nВес: %d кг\nПозиция: %s\nКонтакты: %s",
-		player.Name, player.Height, player.Weight, player.Position, player.Contact)
+  message := fmt.Sprintf("Имя: %s\nРост: %d см\nВес: %d кг\nПозиция: %s\nКонтакты: %s\nНомер игрока: %d",
+		player.Name, player.Height, player.Weight, player.Position, player.Contact, player.Number)
 	bot.Send(tgbotapi.NewMessage(chatID, message))
 }
 
-// Выход из аккаунта
 func (h *Handler) Logout(bot *tgbotapi.BotAPI, temporaryData map[int64]map[string]string, userStates map[int64]string, chatID int64, userID int64) {
 	err := h.DB.Where("chat_id = ?", chatID).Delete(&models.Player{}).Error
 	if err != nil {

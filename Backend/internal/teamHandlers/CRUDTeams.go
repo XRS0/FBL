@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+  "strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -77,10 +78,56 @@ func (h *Handler) CreateTeamName(bot *tgbotapi.BotAPI, chatID int64, msg *tgbota
 	userStates[int64(userID)] = ""
 }
 
-func (h *Handler) JoinTeam(bot *tgbotapi.BotAPI, chatID int64, text string) {
+func (h *Handler) JoinTeam(bot *tgbotapi.BotAPI, chatID int64, text string, userStates map[int64]string) {
+	if userStates[chatID] == "join_team" {
+		if strings.TrimSpace(text) == "unk" {
+			sendMessage(bot, chatID, "Вы успешно вступили в команду! Номер игрока будет выбран позже.")
+			delete(userStates, chatID)
+			return
+		}
+
+		userNumber, err := strconv.Atoi(strings.TrimSpace(text))
+		if err != nil || userNumber < 1 || userNumber > 100 {
+			sendMessage(bot, chatID, "Укажите корректный номер (от 1 до 100), или напишите 'unk' для того чтобы выбрать номер позже.")
+			return
+		}
+    
+		var player models.Player
+		if err := h.DB.Where("chat_id = ?", chatID).First(&player).Error; err != nil {
+			sendMessage(bot, chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register.")
+			return
+		}
+
+		var existingPlayer models.Player
+		err = h.DB.Where("team_id = ? AND number = ?", player.TeamID, userNumber).First(&existingPlayer).Error
+
+		if err != nil {
+			// Если игрок с таким номером не найден
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				player.Number = uint8(userNumber) // Устанавливаем номер игрока
+				if err := h.DB.Save(&player).Error; err != nil {
+					sendMessage(bot, chatID, "Ошибка вступления в команду. Попробуйте позже.")
+					return
+				}
+
+				sendMessage(bot, chatID, fmt.Sprintf("Вы успешно вступили в команду с номером %d!", userNumber))
+				delete(userStates, chatID) // Удаляем состояние пользователя
+				return
+			} else {
+				// Если произошла другая ошибка (например, проблема с базой данных)
+				sendMessage(bot, chatID, "Ошибка вступления в команду. Попробуйте позже.")
+				return
+			}
+		} else {
+			// Если игрок с таким номером уже существует
+			sendMessage(bot, chatID, "Игрок с таким номером уже существует, попробуйте другой.")
+			return
+		}
+	}
+
 	parts := strings.Split(text, " ")
 	if len(parts) < 2 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /join_team \"Имя команды\""))
+		sendMessage(bot, chatID, "Используйте формат: /join_team \"Имя команды\"")
 		return
 	}
 
@@ -88,23 +135,32 @@ func (h *Handler) JoinTeam(bot *tgbotapi.BotAPI, chatID int64, text string) {
 
 	var team models.Team
 	if err := h.DB.Where("name = ?", teamName).First(&team).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Команда с указанным именем не найдена. Проверьте имя команды."))
+		sendMessage(bot, chatID, "Команда с указанным именем не найдена. Проверьте имя команды.")
 		return
 	}
 
 	var player models.Player
 	if err := h.DB.Where("chat_id = ?", chatID).First(&player).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register."))
+		sendMessage(bot, chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register.")
 		return
 	}
 
 	team.Players = append(team.Players, player)
 	if err := h.DB.Save(&team).Error; err != nil {
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка вступления в команду. Попробуйте позже."))
+		sendMessage(bot, chatID, "Ошибка вступления в команду. Попробуйте позже.")
 		return
 	}
+  
+	sendMessage(bot, chatID, "Напишите желаемый номер игрока в команде (от 1 до 100), или 'unk' для выбора позже.")
+	userStates[chatID] = "join_team"
+}
 
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("Вы успешно вступили в команду '%s'!", team.Name)))
+// Helper function to send messages and handle errors
+func sendMessage(bot *tgbotapi.BotAPI, chatID int64, text string) {
+	msg := tgbotapi.NewMessage(chatID, text)
+	if _, err := bot.Send(msg); err != nil {
+		log.Printf("Failed to send message to chat %d: %v", chatID, err)
+	}
 }
 
 func (h *Handler) CreateTeam(bot *tgbotapi.BotAPI, chatID int64, userID int, userStates map[int64]string) {
@@ -222,9 +278,9 @@ func (h *Handler) ListPlayersByTeam(bot *tgbotapi.BotAPI, chatID int64, teamName
 		return
 	}
 
-	message := fmt.Sprintf("Игроки команды '%s':\n", teamName)
+	message := fmt.Sprintf("Игроки команды '%s':\n\n", teamName)
 	for _, player := range team.Players {
-		message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s)\n", player.Name, player.Height, player.Weight, player.Position)
+    message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s, Номер игрока: %d)\n\n", player.Name, player.Height, player.Weight, player.Position, player.Number)
 	}
 
 	bot.Send(tgbotapi.NewMessage(chatID, message))

@@ -1,3 +1,32 @@
-/Backend/*.env
-/Backend/**/config.yaml
-backup.sql
+# Игнорировать конфигурационные файлы
+Backend/config/config.yaml
+
+# Игнорировать резервные копии базы данных
+Backend/backup.sql
+
+# Игнорировать Docker-файлы
+Backend/docker-compose.yaml
+
+# Игнорировать временные файлы и архивы
+FrontEnd/FrontEnd.zip
+
+# Игнорировать бинарные файлы и зависимости
+Backend/cmd/bot
+Backend/go.sum
+
+# Игнорировать локальные настройки IDE
+.idea/
+.vscode/
+
+# Игнорировать логи и временные файлы
+*.log
+*.tmp
+
+# Игнорировать скомпилированные бинарные файлы
+*.exe
+*.out
+*.bin
+
+# Игнорировать папки с зависимостями (если используются)
+vendor/
+node_modules/

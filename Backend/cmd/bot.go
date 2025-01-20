@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"basketball-league/config"
-	capH "basketball-league/internal/CapitanHandlers"
 	wsh "basketball-league/internal/WSH"
 	dbpkg "basketball-league/internal/db"
 	mtH "basketball-league/internal/matchHandlers"
@@ -23,7 +22,6 @@ type HandlersConfig struct {
 	mhHandler mtH.Handler
 	tmHandler tmH.Handler
 	usHandler usH.Handler
-  cpHandler capH.Handler
 }
 
 var cfg config.Config
@@ -50,10 +48,6 @@ func main() {
 
 	var DB = dbpkg.InitDatabase(cfg)
 
-  Handler.mhHandler.Handler = models.Handler{DB: DB}
-  Handler.tmHandler.Handler = models.Handler{DB: DB}
-  Handler.usHandler.Handler = models.Handler{DB: DB}
-  Handler.cpHandler.Handler = models.Handler{DB: DB}
   go wsh.StartWS(DB)
 
 	bot, err := tgbotapi.NewBotAPI(cfg.TgApiToken)
@@ -69,6 +63,10 @@ func main() {
 
 	updates := bot.GetUpdatesChan(u)
 
+  Handler.mhHandler.Handler = models.Handler{DB: DB, Bot: bot}
+  Handler.tmHandler.Handler = models.Handler{DB: DB, Bot: bot}
+  Handler.usHandler.Handler = models.Handler{DB: DB, Bot: bot}
+ 
 	for update := range updates {
 		if update.Message != nil {
 			go handleMessage(bot, update.Message)
@@ -90,13 +88,13 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 	// Обработка состояний
 	switch state {
 	case "register_name", "register_patronymic", "register_last_name", "register_height", "register_weight", "register_position", "register_contact":
-		Handler.usHandler.RegisterPlayer(bot, temporaryData, userStates, msg)
+		Handler.usHandler.RegisterPlayer(temporaryData, userStates, msg)
 	case "update_name", "update_patronymic", "update_surname", "update_height", "update_weight", "update_position":
-		Handler.usHandler.UpdatePlayer(bot, msg, userStates, temporaryData)
+		Handler.usHandler.UpdatePlayer(msg, userStates, temporaryData)
 	case "create_team_name":
-		Handler.tmHandler.CreateTeamName(bot, chatID, msg, int(userID), userStates)
+		Handler.tmHandler.CreateTeamName(chatID, msg, int(userID), userStates)
 	case "join_team":
-    Handler.tmHandler.JoinTeam(bot, chatID, msg.Text, userStates)
+    Handler.tmHandler.JoinTeam(chatID, msg.Text, userStates)
 	default:
 		// Если состояние неизвестно, сбрасываем его
 		delete(userStates, userID)
@@ -114,27 +112,27 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		sendStartMessage(bot, chatID)
 	case "/register":
 		userStates[userID] = "register"
-		Handler.usHandler.RegisterPlayer(bot, temporaryData, userStates, msg)
+		Handler.usHandler.RegisterPlayer(temporaryData, userStates, msg)
 	case "/profile":
-		Handler.usHandler.ListProfile(bot, chatID)
+		Handler.usHandler.ListProfile(chatID)
 	case "/update_profile":
-		Handler.usHandler.UpdatePlayer(bot, msg, userStates, temporaryData)
+		Handler.usHandler.UpdatePlayer(msg, userStates, temporaryData)
 	case "/teams":
-		Handler.tmHandler.ListTeams(bot, chatID)
+		Handler.tmHandler.ListTeams(chatID)
 	case "/create_team":
-		Handler.tmHandler.CreateTeam(bot, chatID, int(userID), userStates)
+		Handler.tmHandler.CreateTeam(chatID, int(userID), userStates)
 	case "/logout":
-		Handler.usHandler.Logout(bot, temporaryData, userStates, chatID, userID)
+		Handler.usHandler.Logout(temporaryData, userStates, chatID, userID)
 	case "/players":
 		if len(commandParts) < 2 {
 			bot.Send(tgbotapi.NewMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ,"+
 				" либо /players_all	если хотите получить всех игроков без команды"))
 		} else {
 			teamName := strings.TrimSpace(commandParts[1])
-			Handler.tmHandler.ListPlayersByTeam(bot, chatID, teamName)
+			Handler.tmHandler.ListPlayersByTeam(chatID, teamName)
 		}
 	case "/players_all":
-		Handler.tmHandler.ListPlayersWithoutTeam(bot, chatID)
+		Handler.tmHandler.ListPlayersWithoutTeam(chatID)
 	case "/create_match":
 		if !isAdmin(chatID, cfg) {
 			bot.Send(tgbotapi.NewMessage(chatID, "У вас нет прав для выполнения этой команды."))
@@ -291,9 +289,9 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 
 	default:
 		if strings.HasPrefix(msg.Text, "/join_team") {
-			Handler.tmHandler.JoinTeam(bot, chatID, msg.Text, userStates)
+			Handler.tmHandler.JoinTeam(chatID, msg.Text, userStates)
 		} else if strings.HasPrefix(userStates[userID], "register") {
-			Handler.usHandler.RegisterPlayer(bot, temporaryData, userStates, msg)
+			Handler.usHandler.RegisterPlayer(temporaryData, userStates, msg)
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "Неизвестная команда. Попробуйте /start."))
 		}

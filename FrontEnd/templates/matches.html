@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#000"/>
+    <title>FBL Matches</title>
+    <link rel="stylesheet" href="../static/styles/main.css">
+    <link rel="stylesheet" href="../static/styles/media.css">
+    <link rel="stylesheet" href="../static/styles/animations&add-styles.css">
+    <link rel="shortcut icon" href="../assets/icons/Favicon.svg" type="image/x-icon">
+</head>
+<body>
+  <main style="min-height: 700px; background-image: url('../assets/images/Matches-bg.png');">
+    <h1 class="matches-title" style="position: relative; z-index: 1;">
+      <span style="color: #3F6FFF">М</span>АТЧ<span style="color: #3F6FFF">И</span>
+    </h1>
+    <img src="../assets/images/Background-playground.png" alt="background_Playground" class="back-paygr" style="top: -1%; right: 11%;">
+
+    <div class="container" id="matches-container"></div>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="fbl-note">F<span style="color: #3F6FFF">B</span>L</div>
+      <div class="separation-line"></div>
+      <div class="matches-block">
+          <div class="social-tg">
+            <img src="../assets/icons/Tg-ico.svg" alt="tg" id="tg-ico">
+          </div>
+
+          <div class="social-vk social-tg">
+            <img src="../assets/icons/Vk-ico.svg" alt="vk" id="vk-ico">
+          </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="../static/scripts/utils.js"></script>
+  <script src="../static/scripts/matches.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      fetchMatches();
+    });
+  </script>
+</body>
+</html>

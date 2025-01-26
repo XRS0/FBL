@@ -79,6 +79,8 @@ img {
 
 .social-tg {
     width: 70px;
+    margin-top: 50px;
+    margin-inline: 20px;
     aspect-ratio: 1 / 1;
     display: flex;
     justify-content: center;

@@ -128,9 +128,15 @@
                     Статус
                 </div>
             </div>
+
             <div class="separation-line"></div>
+            
             <div class="matches-block">
                 <div class="no-matches">Матчей пока нет</div>
+            </div>
+
+            <div class="teams-block" style="margin-block: 50px;"> <!--просто класс центрующий -->
+                <div class="fillness-button" onclick="window.open('./matches.html', '_self')">Больше матчей</div>
             </div>
         </div>
 
@@ -155,7 +161,7 @@
                         </div>
                     </div>
                     <div class="table-grid-rows">
-                        <div class="table-names table-cell" style="background-color: #3F6FFF; box-shadow: 0px 2px 20px rgba(0, 6, 0, 0.80);">
+                        <!-- <div class="table-names table-cell" style="background-color: #3F6FFF; box-shadow: 0px 2px 20px rgba(0, 6, 0, 0.80);">
                             <div class="team-info">
                                 <img src="../assets/images/Thumbnail.png" alt="team-icon" class="team-logo-margin">
                                 <div>Russian Wolf</div>
@@ -223,7 +229,7 @@
                                 <div class="name-of-point">0</div>
                                 <div class="name-of-point"><span style="color: #3F6FFF;">0</span></div>
                             </div>
-                        </div>
+                        </div> -->
                     </div>
                 </div>
             </div>
@@ -345,10 +351,16 @@
                 <div class="social-tg">
                     <img src="../assets/icons/Tg-ico.svg" alt="tg" id="tg-ico">
                 </div>
+
+                <div class="social-vk social-tg">
+                    <img src="../assets/icons/Vk-ico.svg" alt="vk" id="vk-ico">
+                  </div>
             </div>
         </div>
     </footer>
 
+    <script src="../static/scripts/utils.js"></script>
     <script src="../static/scripts/main.js"></script>
+    <script src="../static/scripts/matches.js"></script>
 </body>
 </html>

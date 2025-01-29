@@ -18,6 +18,14 @@ type Handler struct {
 	models.Handler
 }
 
+func (h *Handler) GetTeamByName(name string) (*models.Team, error) {
+    var team models.Team
+	  if err := h.DB.Preload("Players").Where("name = ?", name).First(&team).Error; err != nil {
+        return nil, errors.New("команда не найдена")
+    }
+    return &team, nil
+}
+
 func (h *Handler) ListTeams(chatID int64) {
 	var teams []models.Team
 
@@ -61,7 +69,7 @@ func (h *Handler) CreateTeamName(chatID int64, msg *tgbotapi.Message, userID int
 		msgH.SendMessage(h.Bot, chatID, "Вы не зарегистрированы как игрок. Сначала используйте /register.")
 		return
 	}
-
+    
 	team := models.Team{
 		Name:     teamName,
 		OwnerID:  owner.ID,
@@ -329,4 +337,46 @@ func (h *Handler) RemovePlayerFromTeam(chatID int64, playerName string) {
 	}
 
 	msgH.SendMessage(h.Bot, chatID, fmt.Sprintf("Игрок '%s' успешно удалён из команды.", playerName))
+}
+
+func (h *Handler) IsOwner(chatId int64, teamName string) bool {
+  var player models.Player
+  
+  if err := h.DB.Where("chat_id = ?", chatId).First(&player).Error; err != nil {
+    h.Bot.Send(tgbotapi.NewMessage(chatId, "Произошла ошибка, попробуйте позже"))  
+  }
+
+  var team models.Team
+
+  if err := h.DB.Where("name = ?", teamName).First(&team).Error; err != nil {
+    h.Bot.Send(tgbotapi.NewMessage(chatId, "Произошла ошибка, попробуйте позже"))  
+  }
+
+  return team.OwnerID == player.ID
+}
+
+
+func (h *Handler) RemovePlayerByNumber(ownerChatID int64, teamID int, number uint8) error {
+	var owner models.Player
+	if err := h.DB.Where("chat_id = ?", ownerChatID).First(&owner).Error; err != nil {
+		return fmt.Errorf("игрок не найден")
+	}
+
+	// Проверяем, что пользователь владеет выбранной командой
+	var team models.Team
+	if err := h.DB.Where("id = ? AND owner_id = ?", teamID, owner.ID).First(&team).Error; err != nil {
+		return fmt.Errorf("команда не найдена или вы не владелец")
+	}
+
+	var player models.Player
+	if err := h.DB.Where("team_id = ? AND number = ?", teamID, number).First(&player).Error; err != nil {
+		return fmt.Errorf("игрок с номером %d не найден", number)
+	}
+
+	player.TeamID = nil
+	if err := h.DB.Save(&player).Error; err != nil {
+		return fmt.Errorf("ошибка сохранения изменений")
+	}
+
+	return nil
 }

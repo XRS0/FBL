@@ -19,6 +19,19 @@ type Handler struct {
 	models.Handler
 }
 
+func (h *Handler) GetPlayerByNumber(number int64) (*models.Player, error) {
+	var player models.Player
+
+	if err := h.DB.Where("number = ?", number).First(&player).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("игрок не найден")
+		}
+		return nil, err 
+	}
+
+	return &player, nil
+}
+
 func (h *Handler) GetPlayerByChatId(chatID int64) (*models.Player, error) {
 	var player models.Player
 

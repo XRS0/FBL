@@ -2,15 +2,7 @@ package ownerhandlers
 
 import (
 	"basketball-league/internal/models"
-	"errors"
-	"fmt"
-	"log"
-	"strings"
-  "strconv"
-
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-
-	"gorm.io/gorm"
 )
 
 type Handler struct {
@@ -33,7 +25,7 @@ func (h *Handler) IsOwner(chatId int64, teamName string) bool {
   return team.OwnerID == player.ID
 }
 
-func (h *Handler) RemovePlayerFromTeam(chatId int64) {
+func (h *Handler) RemovePlayerFromTeamByPlayerNum(chatId int64) {
   var player models.Player
   
   if err := h.DB.Where("chat_id = ?", chatId).First(&player).Error; err != nil {
@@ -41,6 +33,20 @@ func (h *Handler) RemovePlayerFromTeam(chatId int64) {
   }
 
   if h.IsOwner(chatId, player.Team.Name) {
-    h.RemovePlayerFromTeam(chatId)
-  } 
+    player.TeamID = nil
+    h.DB.Save(&player)
+    return
+  } else {
+    h.Bot.Send(tgbotapi.NewMessage(chatId, "Вы не являетесь владельцем команды"))
+    return
+  }
 }
+
+func (h *Handler) AddPlayerToTeam(chatId int64) {
+  var player models.Player
+
+  if err := h.DB.Where("chat_id = ?", chatId).First(&player).Error; err != nil {
+    h.Bot.Send(tgbotapi.NewMessage(chatId, "Произошла ошибка, попробуйте позже"))  
+  }
+}
+

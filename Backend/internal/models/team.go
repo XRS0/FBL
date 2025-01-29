@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"errors"
+	"time"
+) 
 
 type Team struct {
 	ID        int      `gorm:"primaryKey"`
@@ -11,4 +14,19 @@ type Team struct {
 	IsActive  bool     `gorm:"default:true"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
+}
+
+func (t *Team) RemovePlayerFromTeam(playerNumber uint8) error {
+    for i, player := range t.Players {
+        if player.Number == playerNumber {
+            t.Players = append(t.Players[:i], t.Players[i+1:]...)
+            player.TeamID = nil
+            return nil
+        }
+    }
+    return errors.New("игрок с указанным номером не найден")
+}
+
+func (t *Team) IsOwner(ownerID int) bool {
+    return int64(t.OwnerID) == int64(ownerID)
 }

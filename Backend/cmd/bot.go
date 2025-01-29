@@ -12,6 +12,7 @@ import (
 	dbpkg "basketball-league/internal/db"
 	mtH "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
+	owH "basketball-league/internal/ownerHandlers"
 	tmH "basketball-league/internal/teamHandlers"
 	usH "basketball-league/internal/userHandlers"
 
@@ -22,6 +23,7 @@ type HandlersConfig struct {
 	mhHandler mtH.Handler
 	tmHandler tmH.Handler
 	usHandler usH.Handler
+  owHandler owH.Handler
 }
 
 var cfg config.Config
@@ -66,11 +68,14 @@ func main() {
   Handler.mhHandler.Handler = models.Handler{DB: DB, Bot: bot}
   Handler.tmHandler.Handler = models.Handler{DB: DB, Bot: bot}
   Handler.usHandler.Handler = models.Handler{DB: DB, Bot: bot}
+  Handler.owHandler.Handler = models.Handler{DB: DB, Bot: bot}
  
 	for update := range updates {
 		if update.Message != nil {
 			go handleMessage(bot, update.Message)
-		}
+		} else if update.CallbackQuery != nil {
+      go handleCallbackQuery(bot, update.CallbackQuery)
+    }
 	}
 }
 
@@ -133,6 +138,36 @@ func processCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID int64, u
 		}
 	case "/players_all":
 		Handler.tmHandler.ListPlayersWithoutTeam(chatID)
+  case "/remove_player":
+    if len(commandParts) < 2 {
+        bot.Send(tgbotapi.NewMessage(chatID, "ℹ️ Используйте: /remove_player <номер>"))
+        return
+    }
+    numStr := strings.TrimSpace(commandParts[1])
+    num, err := strconv.ParseUint(numStr, 10, 8)
+    if err != nil {
+        bot.Send(tgbotapi.NewMessage(chatID, "❌ Неверный формат номера"))
+        return
+    }
+    number := uint8(num)
+
+    var owner models.Player
+    if err := Handler.tmHandler.DB.Where("chat_id = ?", userID).First(&owner).Error; err != nil {
+        bot.Send(tgbotapi.NewMessage(chatID, "❌ Вы не зарегистрированы как игрок"))
+        return
+    }
+
+    var teams []models.Team
+    if err := Handler.tmHandler.DB.Where("owner_id = ?", owner.ID).Find(&teams).Error; err != nil || len(teams) == 0 {
+        bot.Send(tgbotapi.NewMessage(chatID, "❌ У вас нет команд"))
+        return
+    }
+
+    if len(teams) > 1 {
+        sendTeamSelectionMenu(bot, chatID, teams, number)
+    } else {
+        processPlayerRemoval(bot, chatID, userID, teams[0].ID, number)
+    }
 	case "/create_match":
 		if !isAdmin(chatID, cfg) {
 			bot.Send(tgbotapi.NewMessage(chatID, "У вас нет прав для выполнения этой команды."))
@@ -326,4 +361,146 @@ func sendStartMessage(bot *tgbotapi.BotAPI, chatID int64) {
 
 	msg := tgbotapi.NewMessage(chatID, message)
 	bot.Send(msg)
+}
+
+func sendTeamSelectionMenu(bot *tgbotapi.BotAPI, chatID int64, teams []models.Team, number uint8) {
+	var buttons []tgbotapi.InlineKeyboardButton
+	for _, team := range teams {
+		callbackData := fmt.Sprintf("confirm_remove:%d:%d", team.ID, number)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(team.Name, callbackData))
+	}
+
+	markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
+	msg := tgbotapi.NewMessage(chatID, "Выберите команду для удаления игрока:")
+	msg.ReplyMarkup = markup
+	bot.Send(msg)
+}
+
+func handleCallbackQuery(bot *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery) {
+	data := query.Data
+	chatID := query.Message.Chat.ID
+	userID := query.From.ID
+
+	switch {
+	case strings.HasPrefix(data, "confirm_remove:"):
+		processConfirmation(bot, query, chatID, userID, data)
+	case strings.HasPrefix(data, "execute_remove:"):
+		executePlayerRemoval(bot, query, chatID, userID, data)
+	case data == "cancel_remove":
+		cancelRemoval(bot, query, chatID)
+	}
+}
+
+func processConfirmation(bot *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, chatID int64, userID int64, data string) {
+	parts := strings.Split(data, ":")
+	if len(parts) != 3 {
+		sendError(bot, chatID, "❌ Ошибка в данных запроса")
+		return
+	}
+
+	teamID, err := strconv.Atoi(parts[1])
+	if err != nil {
+		sendError(bot, chatID, "❌ Неверный формат ID команды")
+		return
+	}
+
+	number, err := strconv.ParseUint(parts[2], 10, 8)
+	if err != nil {
+		sendError(bot, chatID, "❌ Неверный формат номера игрока")
+		return
+	}
+
+	markup := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("✅ Подтвердить", fmt.Sprintf("execute_remove:%d:%d", teamID, number)),
+			tgbotapi.NewInlineKeyboardButtonData("❌ Отмена", "cancel_remove"),
+		),
+	)
+
+	editMsg := tgbotapi.NewEditMessageTextAndMarkup(
+		chatID,
+		query.Message.MessageID,
+		"Вы уверены, что хотите удалить игрока?",
+		markup,
+	)
+	bot.Send(editMsg)
+}
+
+func executePlayerRemoval(bot *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, chatID int64, userID int64, data string) {
+	parts := strings.Split(data, ":")
+	teamID, _ := strconv.Atoi(parts[1])
+	number, _ := strconv.ParseUint(parts[2], 10, 8)
+
+	if err := Handler.tmHandler.RemovePlayerByNumber(userID, teamID, uint8(number)); err != nil {
+		sendError(bot, chatID, "❌ Ошибка: "+err.Error())
+	} else {
+		sendSuccess(bot, chatID, fmt.Sprintf("✅ Игрок №%d успешно удалён", number))
+	}
+	deleteMessage(bot, query)
+}
+
+func cancelRemoval(bot *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery, chatID int64) {
+	sendSuccess(bot, chatID, "❌ Удаление отменено")
+	deleteMessage(bot, query)
+}
+
+func processPlayerRemoval(bot *tgbotapi.BotAPI, chatID int64, userID int64, teamID int, number uint8) {
+	if err := Handler.tmHandler.RemovePlayerByNumber(userID, teamID, number); err != nil {
+		sendError(bot, chatID, "❌ Ошибка: "+err.Error())
+	} else {
+		sendSuccess(bot, chatID, fmt.Sprintf("✅ Игрок №%d успешно удалён", number))
+	}
+}
+
+func sendError(bot *tgbotapi.BotAPI, chatID int64, message string) {
+	bot.Send(tgbotapi.NewMessage(chatID, message))
+}
+
+func sendSuccess(bot *tgbotapi.BotAPI, chatID int64, message string) {
+	bot.Send(tgbotapi.NewMessage(chatID, message))
+}
+
+
+func deleteMessage(bot *tgbotapi.BotAPI, query *tgbotapi.CallbackQuery) {
+    delMsg := tgbotapi.NewDeleteMessage(query.Message.Chat.ID, query.Message.MessageID)
+    bot.Send(delMsg)
+    
+    // Используем AnswerCallbackQuery с CallbackConfig
+    callbackCfg := tgbotapi.NewCallback(query.ID, "")
+    if _, err := bot.Request(callbackCfg); err != nil {
+        log.Println("Ошибка при ответе на callback:", err)
+    }
+}
+
+
+func handleRemovePlayerCommand(bot *tgbotapi.BotAPI, msg *tgbotapi.Message, chatID, userID int64, commandParts []string) {
+	var owner models.Player
+	if err := Handler.tmHandler.DB.Where("chat_id = ?", userID).First(&owner).Error; err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "❌ Вы не зарегистрированы как игрок"))
+		return
+	}
+
+	var teams []models.Team
+	if err := Handler.tmHandler.DB.Where("owner_id = ?", owner.ID).Find(&teams).Error; err != nil || len(teams) == 0 {
+		bot.Send(tgbotapi.NewMessage(chatID, "❌ У вас нет команд"))
+		return
+	}
+
+	if len(commandParts) < 2 {
+		bot.Send(tgbotapi.NewMessage(chatID, "ℹ️ Используйте: /remove_player <номер>"))
+		return
+	}
+
+	num, err := strconv.ParseUint(strings.Split(commandParts[1], " ")[1], 10, 8)
+	if err != nil {
+		bot.Send(tgbotapi.NewMessage(chatID, "❌ Неверный формат номера"))
+		return
+	}
+	number := uint8(num)
+
+	if len(teams) > 1 {
+		sendTeamSelectionMenu(bot, chatID, teams, number)
+	} else {
+		processPlayerRemoval(bot, chatID, userID, teams[0].ID, number)
+	}
 }

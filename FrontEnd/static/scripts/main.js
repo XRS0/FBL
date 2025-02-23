@@ -104,7 +104,7 @@ function closeRules() {
     document.body.classList.remove("noscroll");
 }
 
-const STATISTICS_API = "http://89.104.69.138:8080/statistics";
+const STATISTICS_API = "http://77.239.124.241:8080/statistics";
 
 // Функция для загрузки и отображения статистики
 async function fetchStatistics() {

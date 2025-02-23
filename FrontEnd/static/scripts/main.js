@@ -104,7 +104,7 @@ function closeRules() {
     document.body.classList.remove("noscroll");
 }
 
-const STATISTICS_API = "http://89.104.69.138:8080/statistics";
+const STATISTICS_API = "http://77.239.124.241:8080/statistics";
 
 // Функция для загрузки и отображения статистики
 async function fetchStatistics() {
@@ -128,10 +128,21 @@ async function fetchStatistics() {
 function updateStatisticsContainer(statistics) {
     const statisticsGrid = document.querySelector(".table-grid-rows");
 
-    // Очищаем существующий контент
+    const playOffElement = document.createElement("div");
+    playOffElement.classList.add("play-off-line");
+    playOffElement.innerHTML = `
+        <div class="title">Плей-офф</div>
+        <div class="separation-line"></div>
+        <img src="../assets/icons/Header-arrow.svg" alt="arrow">`;
+
     statisticsGrid.innerHTML = "";
 
     statistics.forEach((team, index) => {
+        if (index === 4) {
+            statisticsGrid.appendChild(playOffElement);
+            return;
+        }
+
         const teamRow = document.createElement("div");
         teamRow.className = "table-names table-cell";
 

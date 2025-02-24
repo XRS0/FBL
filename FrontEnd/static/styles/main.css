@@ -385,6 +385,31 @@ h3 {
     gap: 15px;
 }
 
+.play-off-line {
+    width: 94%;
+    margin-inline: auto;
+    display: flex;
+    align-items: center;
+}
+
+.play-off-line .title {
+    font-family: "Unbounded", sans-serif;
+    font-weight: 400;
+    font-size: 1rem;
+    color: var(--main-blue);
+    white-space: nowrap;
+}
+
+.play-off-line .separation-line {
+    border-color: var(#505050);
+    margin-inline: 20px;
+}
+
+.play-off-line img {
+    width: 24px;
+    transform: rotate(180deg);
+}
+
 .table-names {
     display: flex;
     justify-content: space-between;
@@ -412,16 +437,29 @@ h3 {
 }
 
 .centered-names {
-    width: 65%;
+    width: 62%;
     display: flex;
     justify-content: space-between;
+    margin-right: 1%;
 }
 
 .centered-points {
-    width: 60%;
+    width: 65%;
     display: flex;
     justify-content: space-between;
-    margin-right: 3%;
+    margin-right: 2.5%;
+}
+
+.centered-names .name-of-point {
+    width: 52px;
+    display: flex;
+    justify-content: center;
+}
+
+.centered-points .name-of-point {
+    width: 38px;
+    display: flex;
+    justify-content: center;
 }
 
 .teams-block {

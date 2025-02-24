@@ -128,10 +128,21 @@ async function fetchStatistics() {
 function updateStatisticsContainer(statistics) {
     const statisticsGrid = document.querySelector(".table-grid-rows");
 
-    // Очищаем существующий контент
+    const playOffElement = document.createElement("div");
+    playOffElement.classList.add("play-off-line");
+    playOffElement.innerHTML = `
+        <div class="title">Плей-офф</div>
+        <div class="separation-line"></div>
+        <img src="../assets/icons/Header-arrow.svg" alt="arrow">`;
+
     statisticsGrid.innerHTML = "";
 
     statistics.forEach((team, index) => {
+        if (index === 4) {
+            statisticsGrid.appendChild(playOffElement);
+            return;
+        }
+
         const teamRow = document.createElement("div");
         teamRow.className = "table-names table-cell";
 

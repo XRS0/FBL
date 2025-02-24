@@ -5,15 +5,16 @@ import (
 	"log"
 	"strconv"
 	"strings"
+  "time"
 
 	"basketball-league/config"
+	wsh "basketball-league/internal/WSH"
 	dbpkg "basketball-league/internal/db"
-	"basketball-league/internal/models"
 	mtH "basketball-league/internal/matchHandlers"
+	"basketball-league/internal/models"
 	owH "basketball-league/internal/ownerHandlers"
 	tmH "basketball-league/internal/teamHandlers"
 	usH "basketball-league/internal/userHandlers"
-	wsh "basketball-league/internal/WSH"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"gorm.io/gorm"
@@ -116,7 +117,7 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 	userID := msg.From.ID
 	parts := strings.SplitN(msg.Text, " ", 2)
 	command := parts[0]
-	// Переменная args убрана, так как не используется.
+  isadmin := b.isAdmin(chatID)
 
 	switch command {
 	case "/start":
@@ -134,14 +135,239 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 		b.Handlers.TeamHandler.CreateTeam(chatID, int(userID), b.UserStates)
 	case "/logout":
 		b.Handlers.UserHandler.Logout(b.TempData, b.UserStates, chatID, userID)
-	// Добавьте сюда другие команды по необходимости.
+	case "/players":
+		// Ожидается формат: /players <имя команды>
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте формат: /players ИМЯКОМАНДЫ, либо /players_all если хотите получить всех игроков без команды")
+		} else {
+			teamName := strings.TrimSpace(parts[1])
+			b.Handlers.TeamHandler.ListPlayersByTeam(chatID, teamName, isadmin)
+		}
+	case "/players_all":
+		b.Handlers.TeamHandler.ListPlayersWithoutTeam(chatID, isadmin)
+	case "/remove_player":
+		// Формат: /remove_player <номер>
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "ℹ️ Используйте: /remove_player <номер>")
+			return
+		}
+		numStr := strings.TrimSpace(parts[1])
+		num, err := strconv.ParseUint(numStr, 10, 8)
+		if err != nil {
+			b.sendMessage(chatID, "❌ Неверный формат номера")
+			return
+		}
+		number := uint8(num)
+
+		// Получаем владельца игрока из БД.
+		var owner models.Player
+		if err := b.Handlers.TeamHandler.Handler.DB.Where("chat_id = ?", userID).First(&owner).Error; err != nil {
+			b.sendMessage(chatID, "❌ Вы не зарегистрированы как игрок")
+			return
+		}
+
+		// Получаем команды, где владелец является хозяином.
+		var teams []models.Team
+		if err := b.Handlers.TeamHandler.Handler.DB.Where("owner_id = ?", owner.ID).Find(&teams).Error; err != nil || len(teams) == 0 {
+			b.sendMessage(chatID, "❌ У вас нет команд")
+			return
+		}
+		if len(teams) > 1 {
+			b.sendTeamSelectionMenu(chatID, teams, number)
+		} else {
+			b.processPlayerRemoval(chatID, userID, teams[0].ID, number)
+		}
+	case "/create_match":
+		if !b.isAdmin(chatID) {
+			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+			return
+		}
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /create_match <Team1ID> <Team2ID> <Date> <Location>")
+			return
+		}
+		args := strings.Fields(parts[1])
+		if len(args) < 4 {
+			b.sendMessage(chatID, "Недостаточно данных. Используйте: /create_match <Team1ID> <Team2ID> <Date> <Location>")
+			return
+		}
+		team1ID, _ := strconv.Atoi(args[0])
+		team2ID, _ := strconv.Atoi(args[1])
+		// Используем формат даты "2006-01-02 15:04:05"
+		const layout = "2006-01-02 15:04:05"
+		date, err := time.Parse(layout, args[2]+" "+args[3])
+		if err != nil {
+			b.sendMessage(chatID, "Ошибка разбора даты: "+err.Error())
+			return
+		}
+		location := ""
+		if len(args) >= 5 {
+			location = args[4]
+		}
+		match, err := b.Handlers.MatchHandler.CreateMatch(uint(team1ID), uint(team2ID), date, location)
+		if err != nil {
+			b.sendMessage(chatID, "Ошибка создания матча: "+err.Error())
+			return
+		}
+		b.sendMessage(chatID, fmt.Sprintf("Матч создан: #%d", match.ID))
+	case "/get_match":
+		if !b.isAdmin(chatID) {
+			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+			return
+		}
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /get_match <ID>")
+			return
+		}
+		matchID, err := strconv.Atoi(parts[1])
+		if err != nil {
+			b.sendMessage(chatID, "Неверный формат ID")
+			return
+		}
+		match := b.Handlers.MatchHandler.GetMatchByID(matchID)
+		if match == nil {
+			b.sendMessage(chatID, "Матч не найден")
+			return
+		}
+		b.sendMessage(chatID, fmt.Sprintf("Матч #%d: %s vs %s в %s", match.ID, match.Team1.Name, match.Team2.Name, match.Location))
+	case "/delete_match":
+		if !b.isAdmin(chatID) {
+			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+			return
+		}
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /delete_match <ID>")
+			return
+		}
+		matchID, err := strconv.Atoi(parts[1])
+		if err != nil {
+			b.sendMessage(chatID, "Неверный формат ID")
+			return
+		}
+		if err := b.Handlers.MatchHandler.DeleteMatch(matchID); err != nil {
+			b.sendMessage(chatID, "Ошибка удаления матча: "+err.Error())
+			return
+		}
+		b.sendMessage(chatID, fmt.Sprintf("Матч #%d успешно удален.", matchID))
+	case "/create_stat":
+		if !b.isAdmin(chatID) {
+			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+			return
+		}
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /create_stat <MatchID> <TeamID1> <TeamID2> <Team1Score> <Team2Score>")
+			return
+		}
+		data := strings.Fields(parts[1])
+		if len(data) != 5 {
+			b.sendMessage(chatID, "Неверное количество параметров. Используйте: /create_stat <MatchID> <TeamID1> <TeamID2> <Team1Score> <Team2Score>")
+			return
+		}
+		matchID, err := strconv.ParseUint(data[0], 10, 32)
+		if err != nil {
+			b.sendMessage(chatID, "MatchID должен быть числом.")
+			return
+		}
+		teamID1, err := strconv.ParseUint(data[1], 10, 32)
+		if err != nil {
+			b.sendMessage(chatID, "TeamID1 должен быть числом.")
+			return
+		}
+		teamID2, err := strconv.ParseUint(data[2], 10, 32)
+		if err != nil {
+			b.sendMessage(chatID, "TeamID2 должен быть числом.")
+			return
+		}
+		team1Score, err := strconv.Atoi(data[3])
+		if err != nil {
+			b.sendMessage(chatID, "Team1Score должен быть числом.")
+			return
+		}
+		team2Score, err := strconv.Atoi(data[4])
+		if err != nil {
+			b.sendMessage(chatID, "Team2Score должен быть числом.")
+			return
+		}
+		stat, err := b.Handlers.MatchHandler.CreateMatchStatistics(uint(matchID), uint(teamID1), uint(teamID2), team1Score, team2Score)
+		if err != nil {
+			b.sendMessage(chatID, fmt.Sprintf("Ошибка создания статистики: %v", err))
+			return
+		}
+		b.sendMessage(chatID, fmt.Sprintf("Статистика успешно создана для матча #%d", stat.ID))
+	case "/get_stat":
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /get_stat <MatchID>")
+			return
+		}
+		matchID, err := strconv.ParseUint(parts[1], 10, 32)
+		if err != nil {
+			b.sendMessage(chatID, "MatchID должен быть числом.")
+			return
+		}
+		stat, err := b.Handlers.MatchHandler.GetStatisticsByMatchID(uint(matchID))
+		if err != nil {
+			b.sendMessage(chatID, fmt.Sprintf("Ошибка: %v", err))
+			return
+		}
+		// Получаем данные о командах для отображения результата.
+		team1 := b.Handlers.TeamHandler.GetTeamByID(int(stat.TeamID1))
+		team2 := b.Handlers.TeamHandler.GetTeamByID(int(stat.TeamID2))
+		b.sendMessage(chatID, fmt.Sprintf(
+			"Счет команды %s - %v,\nСчет команды %s - %v\n",
+			team1.Name, stat.Team1Score,
+			team2.Name, stat.Team2Score,
+		))
+	case "/delete_stat":
+		if !b.isAdmin(chatID) {
+			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+			return
+		}
+		if len(parts) < 2 {
+			b.sendMessage(chatID, "Используйте: /delete_stat <ID>")
+			return
+		}
+		response := b.Handlers.MatchHandler.DeleteMatchStatistic(parts[1])
+		b.sendMessage(chatID, response)
 	default:
+		// Если сообщение начинается с "/join_team", обрабатываем его отдельно.
 		if strings.HasPrefix(msg.Text, "/join_team") {
 			b.Handlers.TeamHandler.JoinTeam(chatID, msg.Text, b.UserStates)
 		} else {
 			b.sendMessage(chatID, "Неизвестная команда. Попробуйте /start.")
 		}
 	}
+}
+
+// sendTeamSelectionMenu выводит меню выбора команды для удаления игрока.
+func (b *Bot) sendTeamSelectionMenu(chatID int64, teams []models.Team, number uint8) {
+	var buttons []tgbotapi.InlineKeyboardButton
+	for _, team := range teams {
+		callbackData := fmt.Sprintf("confirm_remove:%d:%d", team.ID, number)
+		buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(team.Name, callbackData))
+	}
+	markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
+	msg := tgbotapi.NewMessage(chatID, "Выберите команду для удаления игрока:")
+	msg.ReplyMarkup = markup
+	b.API.Send(msg)
+}
+
+// processPlayerRemoval удаляет игрока из команды.
+func (b *Bot) processPlayerRemoval(chatID int64, userID int64, teamID int, number uint8) {
+	if err := b.Handlers.TeamHandler.RemovePlayerByNumber(userID, teamID, number); err != nil {
+		b.sendMessage(chatID, "❌ Ошибка: "+err.Error())
+	} else {
+		b.sendMessage(chatID, fmt.Sprintf("✅ Игрок №%d успешно удалён", number))
+	}
+}
+
+// isAdmin проверяет, является ли пользователь администратором.
+func (b *Bot) isAdmin(chatID int64) bool {
+	for _, admin := range b.Config.Admins {
+		if admin == chatID {
+			return true
+		}
+	}
+	return false
 }
 
 // handleCallbackQuery обрабатывает callback-запросы.
@@ -271,7 +497,7 @@ func main() {
 	// Инициализация базы данных.
 	DB := dbpkg.InitDatabase(cfg)
 
-	// Запуск веб-сокета.
+	// Запуск веб-сервера.
 	go wsh.StartWS(DB)
 
 	// Создаем и запускаем бота.
@@ -281,4 +507,3 @@ func main() {
 	}
 	bot.Run()
 }
-

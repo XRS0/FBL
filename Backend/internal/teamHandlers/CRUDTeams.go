@@ -234,7 +234,7 @@ func (h *Handler) RenameTeam(msg *tgbotapi.Message, userStates map[int64]string)
 	msgH.SendMessage(h.Bot, chatID, fmt.Sprintf("Название вашей команды успешно обновлено на: %s", newTeamName))
 }
 
-func (h *Handler) ListPlayersWithoutTeam(chatID int64) {
+func (h *Handler) ListPlayersWithoutTeam(chatID int64, isAdmin bool) {
 	var players []models.Player
 
 	err := h.DB.Where("team_id IS NULL").Find(&players).Error
@@ -250,15 +250,23 @@ func (h *Handler) ListPlayersWithoutTeam(chatID int64) {
 	}
 
 	message := "Игроки без команды:\n"
-	for _, player := range players {
-		message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s)\n",
+  if isAdmin {
+    for _, player := range players {
+      message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s, Контакт игрока: %s)\n",
+	  	player.Name, player.Height, player.Weight, player.Position, player.Contact)
+	  }
+  } else {
+    for _, player := range players {
+	  	message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s)\n",
 			player.Name, player.Height, player.Weight, player.Position)
-	}
+	  }
+  }
+	
 
 	msgH.SendMessage(h.Bot, chatID, message)
 }
 
-func (h *Handler) ListPlayersByTeam(chatID int64, teamName string) {
+func (h *Handler) ListPlayersByTeam(chatID int64, teamName string, isAdmin bool) {
 	var team models.Team
 
 	err := h.DB.Preload("Players").Where("name = ?", teamName).First(&team).Error
@@ -278,9 +286,16 @@ func (h *Handler) ListPlayersByTeam(chatID int64, teamName string) {
 	}
 
 	message := fmt.Sprintf("Игроки команды '%s':\n\n", teamName)
-	for _, player := range team.Players {
-    message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s, Номер игрока: %d)\n\n", player.Name, player.Height, player.Weight, player.Position, player.Number)
-	}
+  if isAdmin {
+    for _, player := range team.Players {
+      message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s, Номер игрока: %d, Контактные данные: %s)\n\n", player.Name, player.Height, player.Weight, player.Position, player.Number, player.Contact)
+	  }
+  } else {
+    for _, player := range team.Players {
+      message += fmt.Sprintf("- %s (Рост: %d см, Вес: %d кг, Позиция: %s, Номер игрока: %d)\n\n", player.Name, player.Height, player.Weight, player.Position, player.Number)
+	  }
+  }
+	
 
 	msgH.SendMessage(h.Bot, chatID, message)
 }

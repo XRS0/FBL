@@ -49,21 +49,15 @@ img {
     cursor: pointer;
 }
 
-.match-widget:hover {
+.match-widget:hover,
+
+.player-card:hover {
     border: 1px solid var(--main-blue);
 }
 
 .team-widget {
     user-select: none;
     cursor: auto;
-}
-
-.team-widget:hover {
-    border: 1px solid var(--main-blue);
-}
-
-.player-card:hover {
-    border: 1px solid var(--main-blue);
 }
 
 .change-border {

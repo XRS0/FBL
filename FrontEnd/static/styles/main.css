@@ -107,7 +107,6 @@ body {
     justify-content: center;
     background-image: url("../../assets/images/Hero-page.png");
     background-position: center;
-    background-size: cover;
 }
 
 .header-content {
@@ -158,7 +157,7 @@ body {
 }
 
 .header-arrow {
-    margin-top: 10vh;
+    margin-top: 9vh;
     z-index: 1;
 }
 
@@ -307,6 +306,10 @@ h3 {
     box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.7);
 }
 
+.match-widget img {
+    max-height: 130px;
+}
+
 .no-matches {
     font-family: "Unbounded", sans-serif;
     font-weight: 500;
@@ -325,6 +328,7 @@ h3 {
     align-items: center;
     justify-content: center;
     background-image: url("../../assets/images/Matches-thumbnail.png");
+    background-repeat: no-repeat;
     min-height: 130px;
     height: 100%;
     aspect-ratio: 1 / 1;
@@ -334,6 +338,10 @@ h3 {
     font-size: 1vw;
     min-height: 60px;
     background-size: contain;
+}
+
+.team-info .match-team-name img {
+    max-height: 65px;
 }
 
 .match-info {
@@ -466,7 +474,6 @@ h3 {
     width: 100%;
     display: flex;
     justify-content: center;
-
     font-family: "Unbounded", sans-serif;
 }
 
@@ -481,11 +488,11 @@ h3 {
 
 .team-widget {
     width: 100%;
+    max-width: 690px;
     border: 1px solid var(--add-gray);
     box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.7);
     border-radius: 30px;
     max-height: fit-content;
-    max-width: fit-content;
 }
 
 .team-header {
@@ -495,11 +502,12 @@ h3 {
 }
 
 .team-header img {
-    width: 75px;
+    max-height: 80px;
     margin-right: 15px;
 }
 
 .team-name {
+    color: #D9D9D9;
     font-size: 38px;
     font-weight: 600;
 }
@@ -514,19 +522,30 @@ h3 {
 }
 
 .player-card {
+    position: relative;
     text-align: center;
     border: 1px solid var(--add-gray);
     border-radius: 20px;
-    max-width: 190px;
+    width: 190px;
     aspect-ratio: 1 / 1;
-
 }
 
 .player-card img {
     display: block;
     margin-inline: auto;
-    margin-top: 3%;
+    margin-top: 7%;
+}
 
+.player-number {
+    position: absolute;
+    width: 100%;
+    top: 90px;
+    left: 0;
+    text-align: center;
+    color: var(--main-blue);
+    font-family: "Unbounded";
+    font-weight: 400;
+    font-size: 35px;
 }
 
 .player-name {
@@ -680,7 +699,7 @@ body.noscroll {
     width: 96%;
     height: 92%;
     overflow-y: auto;
-    -webkit-mask-image: linear-gradient(0deg, transparent 24px, #121212 60px);
+    -webkit-mask-image: linear-gradient(0deg, transparent 15px, #121212 85px);
 }
 
 .rules-content h3 {

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#000"/>
-    <title>FBL Matches</title>
+    <title>FBL Teams</title>
     <link rel="stylesheet" href="../static/styles/main.css">
     <link rel="stylesheet" href="../static/styles/media.css">
     <link rel="stylesheet" href="../static/styles/animations&add-styles.css">
@@ -17,7 +17,11 @@
     </h1>
     <img src="../assets/images/Background-playground.png" alt="background_Playground" class="back-paygr" style="top: -1%; right: 11%;">
 
-    <div class="container" id="matches-container"></div>
+    <div class="container">
+      <div class="teams-block" id="teams-container">
+        <!-- teams places here -->
+      </div>
+  </div>
   </main>
 
   <footer>
@@ -36,11 +40,13 @@
     </div>
   </footer>
 
+  <script src="../static/scripts/storage.js"></script>
   <script src="../static/scripts/utils.js"></script>
-  <script src="../static/scripts/matches.js"></script>
+  <script src="../static/scripts/main.js"></script>
+  <script src="../static/scripts/teams.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      fetchMatches();
+      fetchTeams();
     });
   </script>
 </body>

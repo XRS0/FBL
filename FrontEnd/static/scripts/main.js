@@ -104,23 +104,28 @@ function closeRules() {
     document.body.classList.remove("noscroll");
 }
 
-const STATISTICS_API = "http://77.239.124.241:8080/statistics";
-
 // Функция для загрузки и отображения статистики
-async function fetchStatistics() {
+async function fetchTeams() {
     try {
-        const response = await fetch(STATISTICS_API);
-
+        const response = await fetch("https://07np62-94-140-138-199.ru.tuna.am/teams_data", {
+        method: "GET",
+        mode: "no-cors"
+    });
         if (!response.ok) {
             throw new Error(`Ошибка HTTP: ${response.status}`);
         }
 
         const statistics = await response.json();
-        statistics.sort((a, b) => b.points - a.points)
+        statistics.sort((a, b) => b.points - a.points);
 
-        updateStatisticsContainer(statistics);
+        TEAMS = statistics;
+
+        updateStatisticsContainer(TEAMS);
+        
+        if (document.title === "Fast Break League") updateTeamsContainer(TEAMS.slice(0, 2));
+        else updateTeamsContainer(TEAMS);
     } catch (error) {
-        console.error("Ошибка загрузки статистики:", error);
+        console.error("Can't response data from TEAMS-API:", error);
     }
 }
 
@@ -164,7 +169,10 @@ function updateStatisticsContainer(statistics) {
         teamRow.innerHTML = `
             <div class="team-info">
                 <div class="match-team-name" style='margin-right: 1vw;'>
-                    ${getShortName(team.name)}
+                    ${TEAMS.find(el => el.name === team.name)
+                        ? `<img src=${TEAMS.find(el => el.name === team.name).logo}>`
+                        : getShortName(team.name)
+                    }
                 </div>
                 <div>${minimizeTeamName(team.name)}</div>
                 <div class="hide-team-name">${getShortName(team.name)}</div>
@@ -172,7 +180,7 @@ function updateStatisticsContainer(statistics) {
             <div class="centered-points">
                 <div class="name-of-point">${team.games}</div>
                 <div class="name-of-point">${team.wins}</div>
-                <div class="name-of-point">${team.losses}</div>
+                <div class="name-of-point">${team.loses}</div>
                 <div class="name-of-point"><span ${index === 0 ? 'style="color: #FFF;"' : 'style="color: #3F6FFF;"'}>${team.points}</span></div>
             </div>
         `;
@@ -183,6 +191,6 @@ function updateStatisticsContainer(statistics) {
 
 // Загружаем данные при загрузке страницы
 document.addEventListener("DOMContentLoaded", () => {
+    fetchTeams();
     fetchMatches();
-    fetchStatistics();
 });

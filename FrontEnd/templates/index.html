@@ -106,7 +106,7 @@
                         <span style="color: #3F6FFF;"><b>не ограничено</b></span><i>, однако командные фолы</i> – <span style="color: #3F6FFF;"><b>5</b></span>. Присоединяйтесь к нашим играм и
                         ощутите атмосферу настоящего баскетбольного соревнования!
                     </p>
-                    <div class="fillness-button" style="margin-bottom: 50px;" onclick="closeRules()">ПОНЯЛ</div>
+                    <div class="fillness-button" style="margin-bottom: 40px;" onclick="closeRules()">ПОНЯЛ</div>
                 </div>
             </div>
         </div>
@@ -171,19 +171,20 @@
             </div>
         </div>
 
-        <div class="container" id="teams-container">
+        <div class="container">
             <div class="separation-line"></div>
-            <!-- teams places here -->
-                
-            <!-- <div class="matches-block">
-                <div class="fillness-button">СОЗДАТЬ КОМАНДУ</div>
-            </div> -->
+
+            <div class="teams-block" id="teams-container"></div>
+            
+            <div class="matches-block">
+                <div class="fillness-button" onclick="window.open('./teams.html', '_self')">Все команды</div>
+            </div>
         </div>
     </main>
 
     <footer>
         <div class="container">
-            <div class="fbl-note">F<span style="color: #3F6FFF">B</span>L</div>
+            <div class="fbl-note" style="display: block;">F<span style="color: #3F6FFF">B</span>L</div>
             <div class="separation-line"></div>
             <div class="matches-block">
                 <div class="social-tg">
@@ -198,6 +199,8 @@
     </footer>
 
     <script src="../static/scripts/utils.js"></script>
+    <script src="../static/scripts/storage.js"></script>
+    <script src="../static/scripts/teams.js"></script>
     <script src="../static/scripts/main.js"></script>
     <script src="../static/scripts/matches.js"></script>
 </body>

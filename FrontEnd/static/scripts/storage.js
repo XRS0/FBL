@@ -1,4 +1,23 @@
-let TEAMS = []; // тут хранятся полученные с бекенда команды
+let TEAMS = [
+  {
+    logo: "https://il3r2w-94-140-138-199.ru.tuna.am/files/7d830192ed2621e8",
+    name: "string",
+
+    games: 1,
+    wins: 1,
+    loses: 1,
+    points: 1,
+
+    players: [
+      {
+        name: "string(name and lastname)",
+        avatar: "link to img or xz",
+        number: 5
+      }
+    ],
+    captain: "как будет удобно, можно просто имя игрока"
+  }
+]; // тут хранятся полученные с бекенда команды
 
 const PlayersPictures = [   // тут хранятся картинки игроков
   "../assets/images/players/Player_01.svg",

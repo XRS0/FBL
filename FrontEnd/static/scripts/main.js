@@ -144,7 +144,7 @@ function updateStatisticsContainer(statistics) {
         teamRow.innerHTML = `
             <div class="team-info">
                 <div class="match-team-name" style='margin-right: 1vw;'>
-                    ${TEAMS.find(el => el.name === team.name)
+                    ${TEAMS.find(el => el.name === team.name && team.logo != undefined)
                         ? `<img src=${TEAMS.find(el => el.name === team.name).logo}>`
                         : getShortName(team.name)
                     }

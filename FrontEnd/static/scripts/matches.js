@@ -1,4 +1,4 @@
-const MATCHES_API = "http://localhost:8080/matches";
+const MATCHES_API = "http://77.239.124.241:8080/matches";
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {
@@ -33,7 +33,7 @@ function updateMatchesContainer(matches) {
 
         matchWidget.innerHTML = `
             <div class="match-team-name">
-                ${TEAMS.find(team => team.name === match.team1_name)
+                ${TEAMS.find(team => team.name === match.team1_name && team.logo != undefined)
                     ? `<img src=${TEAMS.find(team => team.name === match.team1_name).logo}>`
                     : getShortName(match.team1_name)
                 }
@@ -46,7 +46,7 @@ function updateMatchesContainer(matches) {
                 </div>
             </div>
             <div class="match-team-name">
-                ${TEAMS.find(team => team.name === match.team1_name)
+                ${TEAMS.find(team => team.name === match.team1_name && team.logo != undefined)
                     ? `<img src=${TEAMS.find(team => team.name === match.team2_name).logo}>`
                     : getShortName(match.team2_name)
                 }

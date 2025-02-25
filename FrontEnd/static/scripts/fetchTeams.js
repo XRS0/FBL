@@ -1,6 +1,6 @@
 async function fetchTeams() {
   try {
-      const response = await fetch(TEAMS_API, {
+      const response = await fetch("http://77.239.124.241:8080/statistics", {
       method: "GET",
       mode: "cors"
   });

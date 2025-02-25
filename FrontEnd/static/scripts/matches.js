@@ -1,4 +1,4 @@
-const MATCHES_API = "http://77.239.124.241:8080/matches";
+const MATCHES_API = "http://localhost:8080/matches";
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {

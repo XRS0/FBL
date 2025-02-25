@@ -331,28 +331,33 @@ h3 {
     background-image: url("../../assets/images/Matches-thumbnail.png");
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    border-radius: 50%;
     height: 100%;
     min-height: 130px;
     aspect-ratio: 1 / 1;
     overflow: hidden;
 }
 
-.match-team-name img {
+.match-team-name:has(img) {
     max-height: 130px;
-    min-height: 60px;
+    background-size: contain;
+    background-position: center;
 }
 
 .team-info .match-team-name {
-    min-height: auto;
     font-size: 1vw;
+    border-radius: 50%;
+    min-height: auto;
     min-height: 64px;
     border: 1px solid var(--main-blue);
     background-position: center;
 }
 
-.match-team-name img {
+.team-info .match-team-name:has(img) {
     max-height: 64px;
+    height: 100%;
+}
+
+.match-team-name img {
     height: 100%;
 }
 

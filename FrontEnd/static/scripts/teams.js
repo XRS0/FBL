@@ -16,7 +16,9 @@ function updateTeamsContainer(teams) {
     teamBlock.innerHTML = `
       <div class="team-widget" onMouseOver="this.style.borderColor='${teamColors[teamIndex]}'" onMouseOut="this.style.borderColor='#343434'">
         <div class="team-info team-header">
-          <img src=${team.logo}>
+          <div class='logo-container'>
+            <img src=${team.logo}>
+          </div>
           <div class="team-name"><span style="color: ${teamColors[teamIndex]};">${team.name}</span> Team</div>
         </div>
 

@@ -322,26 +322,26 @@ h3 {
 
 .match-team-name {
     font-family: "Unbounded", sans-serif;
-    font-size: 2vw;
+    font-size: 1vw;
     font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
     background-image: url("../../assets/images/Matches-thumbnail.png");
     background-repeat: no-repeat;
-    min-height: 130px;
+    border: 1px solid var(--main-blue);
+    border-radius: 50%;
+    min-height: 60px;
+    max-height: 64px;
     height: 100%;
     aspect-ratio: 1 / 1;
+    overflow: hidden;
 }
 
-.team-info .match-team-name {
-    font-size: 1vw;
-    min-height: 60px;
+.match-team-name img {
+    height: 100%;
     background-size: contain;
-}
-
-.team-info .match-team-name img {
-    max-height: 65px;
+    background-position: center;
 }
 
 .match-info {
@@ -501,9 +501,17 @@ h3 {
     margin-left: 10px;
 }
 
-.team-header img {
+.team-header .logo-container {
     max-height: 80px;
+    aspect-ratio: 1/1;
+    background-size: contain;
+    background-position: center;
     margin-right: 15px;
+    overflow: hidden;
+}
+
+.logo-container img {
+    height: 100%;
 }
 
 .team-name {

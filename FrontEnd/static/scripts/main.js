@@ -104,32 +104,6 @@ function closeRules() {
     document.body.classList.remove("noscroll");
 }
 
-// Функция для загрузки и отображения статистики
-async function fetchTeams() {
-    try {
-        const response = await fetch("http://localhost:8080/teams_data", {
-        method: "GET",
-        mode: "cors"
-    });
-        if (!response.ok) {
-            throw new Error(`Ошибка HTTP: ${response.status}`);
-        }
-
-        const statistics = await response.json();
-        statistics.sort((a, b) => b.points - a.points);
-        
-        TEAMS = [...TEAMS, ...statistics]
-        //TEAMS.concat(statistics);
-
-        updateStatisticsContainer(TEAMS);
-        
-        if (document.title === "Fast Break League") updateTeamsContainer(TEAMS.slice(0, 2));
-        else updateTeamsContainer(TEAMS);
-    } catch (error) {
-        console.error("Can't response data from TEAMS-API:", error);
-    }
-}
-
 // Функция обновления блока статистики
 function updateStatisticsContainer(statistics) {
     const statisticsGrid = document.querySelector(".table-grid-rows");

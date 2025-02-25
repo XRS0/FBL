@@ -1,52 +1,36 @@
-const TEAMS_API = "http://xxx:8080/teams";
-
-async function fetchTeams() {
-  try {
-      const response = await fetch(TEAMS_API);
-
-      if (!response.ok) {
-        throw new Error(`Ошибка HTTP: ${response.status}`);
-      }
-
-      const teams = await response.json();
- 
-      updateTeamsContainer(teams);
-  } catch (error) {
-      console.error("Ошибка загрузки статистики:", error);
-  }
-}
+const TEAMS_API = "http://localhost:8080/teams_data";
 
 function updateTeamsContainer(teams) {
   const teamsContainer = document.getElementById("teams-container");
+  const teamColors = [...TeamColors].concat(shuffle(TeamColors.slice(teams.length - TeamColors.length)));  // беру стандартные 6 цветов и дополняю их еще парой рандомных из 6 цветов (работает максимум на 12 команд)
+  let playersPictures = [...PlayersPictures];   // здесь создаю экземпляр картинок игроков
 
   teamsContainer.innerHTML = "";
 
-  teams.forEach(team => {
+  teams.forEach((team, teamIndex) => {
     const teamBlock = document.createElement("div");
-    teamBlock.className = "teams-block";
+    teamBlock.classList.add("teams-grid-block");
+
+    shuffle(playersPictures);
 
     teamBlock.innerHTML = `
-      <div class="teams-grid-block">
-        <div class="team-widget">
-          <div class="team-info team-header">
-            <img src=${team.logo}>
-            <div class="team-name"><span style="color: #FF1F62;">${team.name}</span> Team</div>
-          </div>
+      <div class="team-widget" onMouseOver="this.style.borderColor='${teamColors[teamIndex]}'" onMouseOut="this.style.borderColor='#343434'">
+        <div class="team-info team-header">
+          <img src=${team.logo}>
+          <div class="team-name"><span style="color: ${teamColors[teamIndex]};">${team.name}</span> Team</div>
+        </div>
 
-          <div class="separation-line" style="border: 1px solid #FF1F62; box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.9);"></div>
+        <div class="separation-line" style="border: 1px solid ${teamColors[teamIndex]}; box-shadow: 0px 2px 6px rgba(0, 0, 0, 0.9);"></div>
 
-          <div class="players-grid">
-            ${team.players.map(player => {
-              const playerCard = document.createElement("div");
-              playerCard.classList.add("player-card");
-
-              playerCard.innerHTML = `
-                <img src=${player.avatar} alt="player">
-                <div class="separation-line"></div>
-                <div class="player-name">${player.name}</div>
-              `;
-            })}
-          </div>
+        <div class="players-grid">
+          ${team.players.map((player, playerIndex) => 
+            `<div class="player-card" onMouseOver="this.style.borderColor='${teamColors[teamIndex]}'" onMouseOut="this.style.borderColor='#343434'">
+              <img src=${playersPictures[playerIndex]} alt="player">
+              <div class="player-number">${player.number}</div>
+              <div class="separation-line"></div>
+              <div class="player-name">${player.name}</div>
+            </div>
+          `).join("")}
         </div>
       </div>
     `;

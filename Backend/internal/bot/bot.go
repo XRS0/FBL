@@ -1,4 +1,4 @@
-package main
+package bot
 
 import (
 	"fmt"
@@ -6,10 +6,13 @@ import (
 	"strconv"
 	"strings"
   "time"
+  "net/http"
+  "encoding/json"
+  "io"
+  "mime/multipart"
+  "bytes"
 
 	"basketball-league/config"
-	wsh "basketball-league/internal/WSH"
-	dbpkg "basketball-league/internal/db"
 	mtH "basketball-league/internal/matchHandlers"
 	"basketball-league/internal/models"
 	owH "basketball-league/internal/ownerHandlers"
@@ -104,6 +107,8 @@ func (b *Bot) handleStateMessage(msg *tgbotapi.Message, state string) {
 		b.Handlers.TeamHandler.CreateTeamName(msg.Chat.ID, msg, int(msg.From.ID), b.UserStates)
 	case "join_team":
 		b.Handlers.TeamHandler.JoinTeam(msg.Chat.ID, msg.Text, b.UserStates)
+  case "awaiting_team_photo":
+	  b.processTeamPhoto(msg)
 	default:
 		// Если состояние неизвестно, сбрасываем его и обрабатываем сообщение как команду.
 		delete(b.UserStates, msg.From.ID)
@@ -328,6 +333,40 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 		}
 		response := b.Handlers.MatchHandler.DeleteMatchStatistic(parts[1])
 		b.sendMessage(chatID, response)
+  case "/set_team_photo":
+		// Доступно только владельцам (капитанам)
+		var owner models.Player
+		if err := b.Handlers.TeamHandler.Handler.DB.Where("chat_id = ?", userID).First(&owner).Error; err != nil {
+			b.sendMessage(chatID, "❌ Вы не зарегистрированы как игрок.")
+			return
+		}
+
+		var teams []models.Team
+		if err := b.Handlers.TeamHandler.Handler.DB.Where("owner_id = ?", owner.ID).Find(&teams).Error; err != nil || len(teams) == 0 {
+			b.sendMessage(chatID, "❌ У вас нет команд, которыми вы владеете.")
+			return
+		}
+
+		// Если несколько команд – предлагаем выбор
+		if len(teams) > 1 {
+			var buttons []tgbotapi.InlineKeyboardButton
+			for _, team := range teams {
+				callbackData := fmt.Sprintf("set_team_photo:%d", team.ID)
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(team.Name, callbackData))
+			}
+			markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
+			msg := tgbotapi.NewMessage(chatID, "Выберите команду, для которой хотите установить фото:")
+			msg.ReplyMarkup = markup
+			b.API.Send(msg)
+		} else {
+			// Если только одна команда – сразу переходим к запросу фото
+			if b.TempData[userID] == nil {
+				b.TempData[userID] = make(map[string]string)
+			}
+			b.TempData[userID]["team_photo_team_id"] = fmt.Sprintf("%d", teams[0].ID)
+			b.UserStates[userID] = "awaiting_team_photo"
+			b.sendMessage(chatID, "Пожалуйста, отправьте фотографию для команды.")
+		}
 	default:
 		// Если сообщение начинается с "/join_team", обрабатываем его отдельно.
 		if strings.HasPrefix(msg.Text, "/join_team") {
@@ -370,13 +409,14 @@ func (b *Bot) isAdmin(chatID int64) bool {
 	return false
 }
 
-// handleCallbackQuery обрабатывает callback-запросы.
 func (b *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	chatID := query.Message.Chat.ID
 	userID := query.From.ID
 	data := query.Data
 
 	switch {
+	case strings.HasPrefix(data, "set_team_photo:"):
+		b.handleSetTeamPhotoCallback(query)
 	case strings.HasPrefix(data, "confirm_remove:"):
 		b.processConfirmation(query, chatID, userID, data)
 	case strings.HasPrefix(data, "execute_remove:"):
@@ -385,6 +425,165 @@ func (b *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 		b.cancelRemoval(query, chatID)
 	}
 }
+
+// handleSetTeamPhotoCallback обрабатывает выбор команды для установки фото.
+func (b *Bot) handleSetTeamPhotoCallback(query *tgbotapi.CallbackQuery) {
+    chatID := query.Message.Chat.ID
+    userID := query.From.ID
+    parts := strings.Split(query.Data, ":")
+    if len(parts) != 2 {
+        b.sendMessage(chatID, "Ошибка выбора команды.")
+        return
+    }
+    teamID := parts[1]
+    if b.TempData[userID] == nil {
+        b.TempData[userID] = make(map[string]string)
+    }
+    b.TempData[userID]["team_photo_team_id"] = teamID
+    b.UserStates[userID] = "awaiting_team_photo"
+
+    b.sendMessage(chatID, "Отправьте фотографию для выбранной команды.")
+
+    // Ответим на нажатие кнопки, чтобы убрать "часики" у inline-кнопки:
+    callbackCfg := tgbotapi.NewCallback(query.ID, "Команда выбрана")
+    b.API.Request(callbackCfg)
+}
+
+
+// processTeamPhoto теперь отправляет файл на внешний файловый сервер.
+func (b *Bot) processTeamPhoto(msg *tgbotapi.Message) {
+    userID := msg.From.ID
+    chatID := msg.Chat.ID
+
+    teamIDStr, ok := b.TempData[userID]["team_photo_team_id"]
+    if !ok {
+        b.sendMessage(chatID, "Не удалось определить команду. Попробуйте снова.")
+        delete(b.UserStates, userID)
+        return
+    }
+
+    // Преобразуем строку teamID в int
+    teamIDInt, err := strconv.Atoi(teamIDStr)
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка определения ID команды.")
+        delete(b.UserStates, userID)
+        return
+    }
+
+    // Предположим, что есть метод GetTeamByID, возвращающий *models.Team
+    team := b.Handlers.TeamHandler.GetTeamByID(teamIDInt)
+    if team == nil {
+        b.sendMessage(chatID, "Команда не найдена.")
+        delete(b.UserStates, userID)
+        return
+    }
+
+    if len(msg.Photo) == 0 {
+        b.sendMessage(chatID, "Пожалуйста, отправьте фотографию.")
+        return
+    }
+
+    // Выбираем фото с наибольшим разрешением
+    photo := msg.Photo[len(msg.Photo)-1]
+
+    // Получаем файл через BotAPI
+    fileCfg := tgbotapi.FileConfig{FileID: photo.FileID}
+    tgFile, err := b.API.GetFile(fileCfg)
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка получения файла: "+err.Error())
+        return
+    }
+
+    // Ссылка для скачивания
+    fileURL := tgFile.Link(b.API.Token)
+
+    // Скачиваем файл в resp.Body
+    resp, err := http.Get(fileURL)
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка скачивания файла: "+err.Error())
+        return
+    }
+    defer resp.Body.Close()
+
+    // Готовим multipart-запрос к файловому серверу
+    var buf bytes.Buffer
+    writer := multipart.NewWriter(&buf)
+
+    // 1) clientId
+    if err := writer.WriteField("clientId", b.Config.FSClientID); err != nil {
+        b.sendMessage(chatID, "Ошибка при формировании запроса (clientId).")
+        return
+    }
+
+    // 2) filePath: "ИмяКоманды/лого.png"
+    //    Если в team.Name пробелы или спец.символы, возможно, стоит их заменять или экранировать.
+    filePath := fmt.Sprintf("%s/logo.png", team.Name)
+    if err := writer.WriteField("filePath", filePath); err != nil {
+        b.sendMessage(chatID, "Ошибка при формировании запроса (filePath).")
+        return
+    }
+
+    // 3) Файл в поле "file"
+    fileFormField, err := writer.CreateFormFile("file", "logo.png")
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка при формировании multipart: "+err.Error())
+        return
+    }
+
+    // Копируем содержимое скачанного файла из resp.Body
+    if _, err = io.Copy(fileFormField, resp.Body); err != nil {
+        b.sendMessage(chatID, "Ошибка копирования файла в буфер: "+err.Error())
+        return
+    }
+
+    // Закрываем multipart-форму
+    if err = writer.Close(); err != nil {
+        b.sendMessage(chatID, "Ошибка при закрытии multipart-формы.")
+        return
+    }
+
+    // Адрес файлового сервера, например http://localhost:8080/upload
+    fsURL := fmt.Sprintf("%s/upload", b.Config.FSHost)
+
+    // Формируем POST-запрос
+    req, err := http.NewRequest(http.MethodPost, fsURL, &buf)
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка формирования POST-запроса: "+err.Error())
+        return
+    }
+
+    // Устанавливаем заголовок Content-Type
+    req.Header.Set("Content-Type", writer.FormDataContentType())
+
+    // Выполняем запрос
+    httpClient := &http.Client{}
+    uploadResp, err := httpClient.Do(req)
+    if err != nil {
+        b.sendMessage(chatID, "Ошибка при отправке файла на сервер: "+err.Error())
+        return
+    }
+    defer uploadResp.Body.Close()
+
+    if uploadResp.StatusCode != http.StatusOK {
+        // Если код не 200 OK — читаем тело, чтобы узнать, что за ошибка
+        bodyBytes, _ := io.ReadAll(uploadResp.Body)
+        log.Printf("Ошибка при загрузке файла: %s", string(bodyBytes))
+        b.sendMessage(chatID, fmt.Sprintf("Ошибка загрузки файла на сервер (код %d).", uploadResp.StatusCode))
+        return
+    }
+
+    // Успешно
+    if err := b.Handlers.TeamHandler.UpdateLogoPath(team.ID, b.getTeamLogoLink(team.Name)); err != nil {
+      b.sendMessage(chatID, fmt.Sprintf("Произошла ошибка, попробуйте позже"))
+    } else {
+      b.sendMessage(chatID, fmt.Sprintf("Фото команды «%s» успешно загружено!", team.Name))
+    }
+
+    // Сбрасываем состояние
+    delete(b.UserStates, userID)
+    delete(b.TempData[userID], "team_photo_team_id")
+}
+
 
 // processConfirmation обрабатывает подтверждение удаления игрока.
 func (b *Bot) processConfirmation(query *tgbotapi.CallbackQuery, chatID int64, userID int64, data string) {
@@ -486,24 +685,52 @@ func (b *Bot) deleteMessage(query *tgbotapi.CallbackQuery) {
 	}
 }
 
-func main() {
-	// Инициализация конфигурации.
-	cfg, err := config.InitConfig()
-	if err != nil {
-		log.Println("Ошибка инициализации конфигурации:", err)
-		return
+// getTeamLogoLink отправляет запрос на создание ссылки на логотип команды
+func (b *Bot) getTeamLogoLink(teamName string) string {
+	requestBody := map[string]string{
+		"clientId": b.Config.FSClientID,
+		"filePath": fmt.Sprintf("%s/logo.png", teamName),
 	}
 
-	// Инициализация базы данных.
-	DB := dbpkg.InitDatabase(cfg)
-
-	// Запуск веб-сервера.
-	go wsh.StartWS(DB)
-
-	// Создаем и запускаем бота.
-	bot, err := NewBot(cfg, DB)
+	jsonData, err := json.Marshal(requestBody)
 	if err != nil {
-		log.Fatalf("Не удалось инициализировать бота: %v", err)
+		fmt.Printf("Ошибка при сериализации JSON: %v\n", err)
+		return ""
 	}
-	bot.Run()
+
+	url := fmt.Sprintf("%s/filelink", b.Config.FSHost)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Ошибка при отправке запроса на %s: %v\n", url, err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Сервер вернул ошибку: %s\n", resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("Ответ сервера: %s\n", string(body))
+		return ""
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		fmt.Printf("Ошибка при декодировании ответа: %v\n", err)
+		return ""
+	}
+
+	if success, ok := response["success"].(bool); ok && success {
+		if url, ok := response["url"].(string); ok {
+			fmt.Println("Ссылка на файл успешно создана!")
+			fmt.Printf("URL: %s\n", url)
+			return url
+		}
+		fmt.Println("URL не найден в ответе сервера.")
+	} else {
+		fmt.Println("Не удалось создать ссылку на файл.")
+		fmt.Printf("Ответ сервера: %v\n", response)
+	}
+
+	return ""
 }
+

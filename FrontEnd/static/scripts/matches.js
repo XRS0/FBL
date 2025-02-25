@@ -1,4 +1,4 @@
-const MATCHES_API = "http://77.239.124.241:8080/matches";
+const MATCHES_API = "http://localhost:8080/matches";
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {
@@ -12,7 +12,7 @@ async function fetchMatches() {
       const matches = await response.json();
       matches.sort((a, b) => new Date(b.time) - new Date(a.time));
 
-      if (document.title === "Fast Break League") updateMatchesContainer(matches.slice(0, 8));
+      if (document.title === "Fast Break League") updateMatchesContainer(matches.slice(0, 6));
       else updateMatchesContainer(matches);
   } catch (error) {
       console.error("Ошибка загрузки матчей:", error);
@@ -33,7 +33,10 @@ function updateMatchesContainer(matches) {
 
         matchWidget.innerHTML = `
             <div class="match-team-name">
-                ${getShortName(match.team1_name)}
+                ${TEAMS.find(team => team.name === match.team1_name)
+                    ? `<img src=${TEAMS.find(team => team.name === match.team1_name).logo}>`
+                    : getShortName(match.team1_name)
+                }
             </div>
             <div class="match-info">
                 <div class="match-time">${formatDateTime(match.time).time}</div>
@@ -43,7 +46,10 @@ function updateMatchesContainer(matches) {
                 </div>
             </div>
             <div class="match-team-name">
-                ${getShortName(match.team2_name)}
+                ${TEAMS.find(team => team.name === match.team1_name)
+                    ? `<img src=${TEAMS.find(team => team.name === match.team2_name).logo}>`
+                    : getShortName(match.team2_name)
+                }
             </div>
         `;
         

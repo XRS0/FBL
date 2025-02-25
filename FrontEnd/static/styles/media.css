@@ -1,3 +1,13 @@
+@media screen and (min-width: 1900px) {
+    .match-team-name {
+        font-size: 35px;
+    }
+
+    .team-info .match-team-name {
+        font-size: 20px;
+    }
+}
+
 @media (max-width: 1510px) {
     .teams-grid-block {
         gap: 40px 50px;
@@ -67,7 +77,7 @@
         width: 67vw;
     }
     .header-arrow {
-        width: 6vh;
+        width: 5vh;
     }
     .blue-square-indicator {
         width: 12.5vw;
@@ -187,6 +197,7 @@
     }
     .header-arrow {
         width: 4vh;
+        margin-top: 7vh;
     }
 
     .back-paygr {
@@ -197,10 +208,15 @@
     .fbl-note {
         right: 1vw;
     }
+
+    .welcome-block {
+        width: 85%;
+    }
     p {
-        font-size: 1.6vw;
-        line-height: 3vw;
-        margin: 2.5vw 0;
+        width: 100%;
+        font-size: 16px;
+        line-height: 25px;
+        margin: 2.6vw 0;
     }
     .fillness-button {
         padding: 1vh 3vw;
@@ -215,6 +231,11 @@
     .statistics {
         margin: 5% 0;
     }
+
+    .play-off-line .title {
+        font-size: 14px;
+    }
+
     .table-names {
         padding: 0 3.65%;
         margin-bottom: 3%;
@@ -313,6 +334,12 @@
         width: 3.5vh;
         margin-top: 5vh;
     }
+
+    .fbl-note {
+        right: 1.7vw;
+        font-size: 3.8vw;
+    }
+
     .blue-square-indicator {
         width: 14vw;
     }
@@ -324,7 +351,7 @@
         width: 100%;
     }
     p {
-        font-size: 2vw;
+        font-size: 16px;
         margin: 4vw 0;
     }
     .small-welcome-text {
@@ -337,10 +364,15 @@
         width: max-content;
     }
     .fillness-button {
-        font-size: 3vw;
+        font-size: 3.5vw;
         width: max-content;
         outline: 3px solid var(--main-blue);
         outline-offset: -3px;
+    }
+
+    h1 {
+        font-size: 8vw;
+        margin-top: 1.5vw !important;
     }
 
     .matches-hint {
@@ -393,6 +425,19 @@
     .statistics {
         margin: 5% 0;
     }
+
+    .play-off-line .separation-line {
+        margin-inline: 2%;
+    }
+
+    .play-off-line .title {
+        font-size: 1.8vw;
+    }
+
+    .play-off-line img {
+        width: 2.5vw;
+    }
+
     .table-grid-rows {
         gap: 12px 0;
     }
@@ -444,7 +489,8 @@
     }
 
     #rules-popup {
-        width: 78%;
+        width: 92%;
+        height: 70vh;
     }
     .rules-header {
         font-size: 3.5vw;
@@ -519,14 +565,23 @@
         line-height: 18px;
     }
 
+    .fbl-note {
+        right: 3.2vw;
+    }
+
     footer {
-        padding: 12vw 0 5vw;
+        padding: 12vw 0 3vw;
+        background-size: auto;
     }
     footer img {
         width: 15%;
     }
+    footer .fbl-note {
+        top: -6vw;
+    }
+
     .social-tg {
-        margin-top: 8vw;
+        margin-block: 4vw !important;
         width: 10vw !important;
     }
 
@@ -550,7 +605,7 @@
         right: 2.8vw;
     }
 
-    .matches-title {
+    h1 {
         font-size: 9vw;
         margin-top: 2vw;
     }
@@ -675,6 +730,14 @@
         display: block;
     }
 
+    .play-off-line .title {
+        font-size: 2vw;
+    }
+
+    .play-off-line img {
+        width: 2.7vw;
+    }
+
     .table-grid-rows {
         gap: 7px;
     }
@@ -711,11 +774,7 @@
     }
 
     .social-tg {
-        margin: 6vw 0;
-    }
-
-    footer {
-        background-size: auto;
+        margin: 4vw 15px !important;
     }
 
     #rules-popup {

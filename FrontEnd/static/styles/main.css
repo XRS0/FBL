@@ -322,7 +322,7 @@ h3 {
 
 .match-team-name {
     font-family: "Unbounded", sans-serif;
-    font-size: 1vw;
+    font-size: 2vw;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -331,17 +331,21 @@ h3 {
     background-repeat: no-repeat;
     border: 1px solid var(--main-blue);
     border-radius: 50%;
-    min-height: 60px;
-    max-height: 64px;
+    min-height: 130px;
     height: 100%;
     aspect-ratio: 1 / 1;
     overflow: hidden;
 }
 
-.match-team-name img {
-    height: 100%;
+.team-info .match-team-name {
+    font-size: 1vw;
+    max-height: 64px;
     background-size: contain;
     background-position: center;
+}
+
+.match-team-name img {
+    height: 100%;
 }
 
 .match-info {

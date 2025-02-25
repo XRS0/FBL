@@ -12,6 +12,7 @@ type Team struct {
 	Owner     *Player  `gorm:"foreignKey:OwnerID"` // Связь belongs-to
 	Players   []Player `gorm:"foreignKey:TeamID"`  // Связь has-many
 	IsActive  bool     `gorm:"default:true"`
+  PathToLogo string
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

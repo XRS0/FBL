@@ -1,18 +1,19 @@
 package wsh
 
 import (
-	mtH "basketball-league/internal/matchHandlers"
-	"basketball-league/internal/models"
-	tmH "basketball-league/internal/teamHandlers"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
 
+	"basketball-league/internal/models"
+	mtH "basketball-league/internal/matchHandlers"
+	tmH "basketball-league/internal/teamHandlers"
+
 	"gorm.io/gorm"
 )
 
+// MatchResponse – структура ответа для матчей.
 type MatchResponse struct {
 	Time       string `json:"time"`
 	Team1Score int    `json:"team1_score"`
@@ -23,6 +24,26 @@ type MatchResponse struct {
 	Location   string `json:"loc"`
 }
 
+// TeamResponse – структура ответа для команды в endpoint /teams_data.
+type TeamResponse struct {
+	Logo    string          `json:"logo"`    // Ссылка на логотип
+	Name    string          `json:"name"`    // Название команды
+	Games   int             `json:"games"`   // Количество игр
+	Wins    int             `json:"wins"`    // Победы
+	Loses   int             `json:"loses"`   // Поражения
+	Points  int             `json:"points"`  // Очки
+	Players []PlayerSummary `json:"players"` // Список игроков
+	Captain string          `json:"captain"` // Имя капитана
+}
+
+// PlayerSummary – краткая информация об игроке.
+type PlayerSummary struct {
+	Name   string `json:"name"`   // Имя игрока (можно добавить фамилию)
+	Avatar string `json:"avatar"` // Ссылка на аватар (если есть)
+	Number uint8  `json:"number"` // Номер игрока
+}
+
+// TeamStatistics – структура для endpoint статистики (если требуется отдельно).
 type TeamStatistics struct {
 	Name   string `json:"name"`
 	Games  int    `json:"games"`
@@ -31,7 +52,9 @@ type TeamStatistics struct {
 	Points int    `json:"points"`
 }
 
+// ServeMatchesHandler возвращает список матчей.
 func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
+	// mainHandler используется для вызова методов из обработчика матчей/команд.
 	var mainHandler = models.Handler{DB: db}
 	if db == nil {
 		log.Fatal("Объект базы данных не инициализирован!")
@@ -53,47 +76,33 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 				continue
 			}
 
-			// Определяем статус матча
+			// Определяем статус матча.
 			var status string
 			if stats.Team1Score == 0 && stats.Team2Score == 0 {
-				status = "Идет регистрация"
+				status = "Еще не прошел"
 			} else {
 				status = "Завершен"
 			}
-			var ht = &tmH.Handler{
-				mainHandler,
-			}
-			// Получение информации о командах
 
+			// Используем обработчик команд для получения информации о командах.
+			var ht = &tmH.Handler{Handler: mainHandler}
 			team1 := ht.GetTeamByID(int(stats.TeamID1))
 			team2 := ht.GetTeamByID(int(stats.TeamID2))
-
-			fmt.Println("DKSJFLDJSFJSLDJFLKDSJFKDJFLDSJFLKDSJFLSDJFLDSJFLKDSJFDJFKDSJFLJDK")
-			// Проверяем, что команды существуют
-			var team1Name, team2Name string
+			team1Name, team2Name := "Неизвестная команда", "Неизвестная команда"
 			if team1 != nil {
 				team1Name = team1.Name
 			} else {
-				team1Name = "Неизвестная команда"
 				log.Printf("Команда с ID %d не найдена", stats.TeamID1)
 			}
-
 			if team2 != nil {
 				team2Name = team2.Name
 			} else {
-				team2Name = "Неизвестная команда"
 				log.Printf("Команда с ID %d не найдена", stats.TeamID2)
 			}
 
-			var hm = &mtH.Handler{
-				mainHandler,
-			}
-
-			fmt.Println(hm)
-
+			// Получаем данные о матче через обработчик матчей.
+			var hm = &mtH.Handler{Handler: mainHandler}
 			var matchDetails = hm.GetMatchByID(int(stats.MatchID))
-
-			fmt.Println(matchDetails)
 			location := "Неизвестная локация"
 			if matchDetails != nil {
 				location = matchDetails.Location
@@ -117,48 +126,111 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
+// ServeTeamsDataHandler возвращает данные о командах в требуемом формате.
+func ServeTeamsDataHandler(db *gorm.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var teams []models.Team
+		// Предзагружаем игроков и владельца (Owner) для каждой команды.
+		if err := db.Preload("Players").Preload("Owner").Find(&teams).Error; err != nil {
+			http.Error(w, "Ошибка при получении команд: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		var results []TeamResponse
+		for _, team := range teams {
+			// Вычисляем статистику матчей для команды.
+			var matches []models.Match
+			if err := db.Where("team1_id = ? OR team2_id = ?", team.ID, team.ID).Find(&matches).Error; err != nil {
+				http.Error(w, "Ошибка при получении матчей для команды: "+err.Error(), http.StatusInternalServerError)
+				return
+			}
+			games := len(matches)
+			wins, losses := 0, 0
+			for _, match := range matches {
+				var stats models.MatchStatistics
+				if err := db.Where("match_id = ?", match.ID).First(&stats).Error; err != nil {
+					continue
+				}
+				// Определяем победу или поражение.
+				if (match.Team1ID == uint(team.ID) && stats.Team1Score > stats.Team2Score) ||
+					(match.Team2ID == uint(team.ID) && stats.Team2Score > stats.Team1Score) {
+					wins++
+				} else if stats.Team1Score != stats.Team2Score {
+					losses++
+				}
+			}
+			points := wins // расчёт очков
+
+			// Формируем список игроков.
+			var players []PlayerSummary
+			for _, player := range team.Players {
+				players = append(players, PlayerSummary{
+					Name:   player.Name,
+					Avatar: "", // Здесь можно добавить ссылку на аватар, если она есть
+					Number: player.Number,
+				})
+			}
+
+			captain := ""
+			if team.Owner != nil {
+				captain = team.Owner.Name
+			}
+
+			results = append(results, TeamResponse{
+				Logo:    team.PathToLogo, // Значение по умолчанию для логотипа
+				Name:    team.Name,
+				Games:   games,
+				Wins:    wins,
+				Loses:   losses,
+				Points:  points,
+				Players: players,
+				Captain: captain,
+			})
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(results)
+	}
+}
+  
+
+// ServeStatisticsHandler возвращает статистику команд в формате TeamStatistics.
 func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var teams []models.Team
-		err := db.Find(&teams).Error
-		if err != nil {
+		if err := db.Find(&teams).Error; err != nil {
 			http.Error(w, "Ошибка при получении статистики команд: "+err.Error(), http.StatusInternalServerError)
 			return
 		}
 
 		var results []TeamStatistics
 		for _, team := range teams {
-			var games, wins, losses, points int
+			var games, wins, losses int
 
 			var matches []models.Match
 			db.Where("team1_id = ? OR team2_id = ?", team.ID, team.ID).Find(&matches)
-
 			for _, match := range matches {
 				var stats models.MatchStatistics
 				db.Where("match_id = ?", match.ID).First(&stats)
-
 				games++
-				if (int(match.Team1ID) == team.ID && stats.Team1Score > stats.Team2Score) ||
-					(int(match.Team2ID) == team.ID && stats.Team2Score > stats.Team1Score) {
+				if (match.Team1ID == uint(team.ID) && stats.Team1Score > stats.Team2Score) ||
+					(match.Team2ID == uint(team.ID) && stats.Team2Score > stats.Team1Score) {
 					wins++
-					points += 3
 				} else if stats.Team1Score != stats.Team2Score {
 					losses++
 				}
 			}
-
-			if wins-losses < 0 {
+			// расчёт очков.
+			points := wins
+			if points < 0 {
 				points = 0
-			} else {
-				points = wins - losses
 			}
-
 			results = append(results, TeamStatistics{
 				Name:   team.Name,
 				Games:  games,
 				Wins:   wins,
 				Losses: losses,
-				Points: wins - points,
+				Points: points,
 			})
 		}
 
@@ -167,13 +239,14 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
+// withCORS добавляет заголовки CORS, разрешая все запросы.
 func withCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Methods", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "*")
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
 
-		// Обработка предварительных запросов CORS (OPTIONS)
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusOK)
 			return
@@ -183,13 +256,16 @@ func withCORS(h http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+
+// StartWS регистрирует обработчики и запускает HTTP-сервер.
 func StartWS(DB *gorm.DB) {
 	http.HandleFunc("/matches", withCORS(ServeMatchesHandler(DB)))
+	http.HandleFunc("/teams_data", withCORS(ServeTeamsDataHandler(DB)))
 	http.HandleFunc("/statistics", withCORS(ServeStatisticsHandler(DB)))
 
 	log.Println("Сервер запущен на http://localhost:8080")
-	err := http.ListenAndServe(":8080", nil)
-	if err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatalf("Ошибка запуска сервера: %v", err)
 	}
 }
+

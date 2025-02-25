@@ -14,6 +14,8 @@ type Config struct {
   PasswordDB string `mapstructure:"passworddb"`
 	Admins     []int64 `mapstructure:"admins"`
 	TgApiToken string   `mapstructure:"tg_api_token"`
+  FSHost string `mapstructure:"fs_host"`
+  FSClientID string `mapstructure:"fs_client_id"`
 }
 
 func InitConfig() (*Config, error) {

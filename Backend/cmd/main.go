@@ -21,7 +21,7 @@ func main() {
 	DB := dbpkg.InitDatabase(cfg)
 
 	// Запуск веб-сервера 
-	go wsh.StartWS(DB)
+	go wsh.StartWS(DB, *cfg)
 
 	// Создаем и запускаем бота
 	tgBot, err := bot.NewBot(cfg, DB)

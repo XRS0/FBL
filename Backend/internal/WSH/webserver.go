@@ -1,13 +1,17 @@
 package wsh
 
 import (
+  "io"
+  "fmt"
+  "bytes"
 	"encoding/json"
 	"log"
 	"net/http"
 	"time"
 
-	"basketball-league/internal/models"
+	"basketball-league/config"
 	mtH "basketball-league/internal/matchHandlers"
+	"basketball-league/internal/models"
 	tmH "basketball-league/internal/teamHandlers"
 
 	"gorm.io/gorm"
@@ -127,7 +131,7 @@ func ServeMatchesHandler(db *gorm.DB) http.HandlerFunc {
 }
 
 // ServeTeamsDataHandler возвращает данные о командах в требуемом формате.
-func ServeTeamsDataHandler(db *gorm.DB) http.HandlerFunc {
+func ServeTeamsDataHandler(db *gorm.DB, cfg config.Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var teams []models.Team
 		// Предзагружаем игроков и владельца (Owner) для каждой команды.
@@ -176,16 +180,33 @@ func ServeTeamsDataHandler(db *gorm.DB) http.HandlerFunc {
 				captain = team.Owner.Name
 			}
 
-			results = append(results, TeamResponse{
-				Logo:    team.PathToLogo, // Значение по умолчанию для логотипа
-				Name:    team.Name,
-				Games:   games,
-				Wins:    wins,
-				Loses:   losses,
-				Points:  points,
-				Players: players,
-				Captain: captain,
-			})
+      var tr TeamResponse
+
+      if team.PathToLogo != "" {
+        tr = TeamResponse{
+				  Logo:    team.PathToLogo, // Значение по умолчанию для логотипа
+				  Name:    team.Name,
+				  Games:   games,
+				  Wins:    wins,
+				  Loses:   losses,
+				  Points:  points,
+				  Players: players,
+				  Captain: captain,
+			  }
+      } else {
+        tr = TeamResponse{
+				  Logo:    getTeamLogoLink(team.Name, cfg), // Значение по умолчанию для логотипа
+				  Name:    team.Name,
+				  Games:   games,
+				  Wins:    wins,
+				  Loses:   losses,
+				  Points:  points,
+				  Players: players,
+				  Captain: captain,
+			  }
+      }
+
+			results = append(results, tr)
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -239,6 +260,55 @@ func ServeStatisticsHandler(db *gorm.DB) http.HandlerFunc {
 	}
 }
 
+// getTeamLogoLink отправляет запрос на создание ссылки на логотип команды
+func getTeamLogoLink(teamName string, cfg config.Config) string {
+	requestBody := map[string]string{
+		"clientId": cfg.FSClientID,
+		"filePath": fmt.Sprintf("%s/logo.png", teamName),
+	}
+
+	jsonData, err := json.Marshal(requestBody)
+	if err != nil {
+		fmt.Printf("Ошибка при сериализации JSON: %v\n", err)
+		return ""
+	}
+
+	url := fmt.Sprintf("%s/filelink", cfg.FSHost)
+	resp, err := http.Post(url, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Ошибка при отправке запроса на %s: %v\n", url, err)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("Сервер вернул ошибку: %s\n", resp.Status)
+		body, _ := io.ReadAll(resp.Body)
+		fmt.Printf("Ответ сервера: %s\n", string(body))
+		return ""
+	}
+
+	var response map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		fmt.Printf("Ошибка при декодировании ответа: %v\n", err)
+		return ""
+	}
+
+	if success, ok := response["success"].(bool); ok && success {
+		if url, ok := response["url"].(string); ok {
+			fmt.Println("Ссылка на файл успешно создана!")
+			fmt.Printf("URL: %s\n", url)
+			return url
+		}
+		fmt.Println("URL не найден в ответе сервера.")
+	} else {
+		fmt.Println("Не удалось создать ссылку на файл.")
+		fmt.Printf("Ответ сервера: %v\n", response)
+	}
+
+	return ""
+}
+
 // withCORS добавляет заголовки CORS, разрешая все запросы.
 func withCORS(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -258,9 +328,9 @@ func withCORS(h http.HandlerFunc) http.HandlerFunc {
 
 
 // StartWS регистрирует обработчики и запускает HTTP-сервер.
-func StartWS(DB *gorm.DB) {
+func StartWS(DB *gorm.DB, cfg config.Config) {
 	http.HandleFunc("/matches", withCORS(ServeMatchesHandler(DB)))
-	http.HandleFunc("/teams_data", withCORS(ServeTeamsDataHandler(DB)))
+	http.HandleFunc("/teams_data", withCORS(ServeTeamsDataHandler(DB, cfg)))
 	http.HandleFunc("/statistics", withCORS(ServeStatisticsHandler(DB)))
 
 	log.Println("Сервер запущен на http://localhost:8080")

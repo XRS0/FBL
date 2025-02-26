@@ -14,6 +14,16 @@ type Handler struct {
 	models.Handler
 }
 
+func (h *Handler) GetUpcomingMatches() []models.Match {
+    var matches []models.Match
+    now := time.Now()
+    h.DB.Preload("Team1").Preload("Team2").
+        Where("date > ?", now).
+        Order("date ASC").
+        Find(&matches)
+    return matches
+}
+
 func (h *Handler) GetMatchByID(matchID int) *models.Match {
 	var match models.Match
 	err := h.DB.Preload("Team1").Preload("Team2").First(&match, matchID).Error

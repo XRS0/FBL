@@ -180,21 +180,21 @@ func ServeTeamsDataHandler(db *gorm.DB, cfg config.Config) http.HandlerFunc {
 				captain = team.Owner.Name
 			}
 
-      var tr TeamResponse
-
-      if team.PathToLogo != "" {
-        tr = TeamResponse{
-				  Logo:    team.PathToLogo, // Значение по умолчанию для логотипа
-				  Name:    team.Name,
-				  Games:   games,
-				  Wins:    wins,
-				  Loses:   losses,
-				  Points:  points,
-				  Players: players,
-				  Captain: captain,
-			  }
-      } else {
-        tr = TeamResponse{
+      // var tr TeamResponse
+			  //
+			  //  if team.PathToLogo != "" {
+			  //    tr = TeamResponse{
+			  //  Logo:    team.PathToLogo, // Значение по умолчанию для логотипа
+			  //  Name:    team.Name,
+			  //  Games:   games,
+			  //  Wins:    wins,
+			  //  Loses:   losses,
+			  //  Points:  points,
+			  //  Players: players,
+			  //  Captain: captain,
+			  // }
+			  //  } else {
+      tr := TeamResponse{
 				  Logo:    getTeamLogoLink(team.Name, cfg), // Значение по умолчанию для логотипа
 				  Name:    team.Name,
 				  Games:   games,
@@ -204,7 +204,7 @@ func ServeTeamsDataHandler(db *gorm.DB, cfg config.Config) http.HandlerFunc {
 				  Players: players,
 				  Captain: captain,
 			  }
-      }
+      // }
 
 			results = append(results, tr)
 		}

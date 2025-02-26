@@ -8,6 +8,9 @@ function updateTeamsContainer(teams) {
   teamsContainer.innerHTML = "";
 
   teams.forEach((team, teamIndex) => {
+    if (team.players == null){
+      return 
+    }
     const teamBlock = document.createElement("div");
     teamBlock.classList.add("teams-grid-block");
 

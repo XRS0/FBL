@@ -2,10 +2,10 @@ package bot
 
 import (
 	"fmt"
+  "time"
 	"log"
 	"strconv"
 	"strings"
-  "time"
   "net/http"
   "encoding/json"
   "io"
@@ -96,6 +96,9 @@ func (b *Bot) handleMessage(msg *tgbotapi.Message) {
 
 // handleStateMessage маршрутизует сообщения в зависимости от состояния пользователя.
 func (b *Bot) handleStateMessage(msg *tgbotapi.Message, state string) {
+  chatID := msg.Chat.ID
+  userID := msg.From.ID
+
 	switch state {
 	case "register_name", "register_patronymic", "register_last_name",
 		"register_height", "register_weight", "register_position", "register_contact":
@@ -109,6 +112,73 @@ func (b *Bot) handleStateMessage(msg *tgbotapi.Message, state string) {
 		b.Handlers.TeamHandler.JoinTeam(msg.Chat.ID, msg.Text, b.UserStates)
   case "awaiting_team_photo":
 	  b.processTeamPhoto(msg)
+  case "create_match_date":
+        const layout = "2006-01-02 15:04:05"
+        _, err := time.Parse(layout, msg.Text)
+        if err != nil {
+            b.sendMessage(chatID, "Неверный формат даты. Попробуйте еще раз (YYYY-MM-DD HH:MM:SS):")
+            return
+        }
+        b.TempData[userID]["create_match_date"] = msg.Text
+        b.UserStates[userID] = "create_match_location"
+        b.sendMessage(chatID, "Введите место проведения матча:")
+  case "create_match_location":
+        b.TempData[userID]["create_match_location"] = msg.Text
+        team1ID, _ := strconv.Atoi(b.TempData[userID]["create_match_team1"])
+        team2ID, _ := strconv.Atoi(b.TempData[userID]["create_match_team2"])
+        date, _ := time.Parse("2006-01-02 15:04:05", b.TempData[userID]["create_match_date"])
+        match, err := b.Handlers.MatchHandler.CreateMatch(uint(team1ID), uint(team2ID), date, msg.Text)
+        if err != nil {
+            b.sendMessage(chatID, "Ошибка создания матча: "+err.Error())
+        } else {
+            b.sendMessage(chatID, fmt.Sprintf("Матч создан: #%d", match.ID))
+        }
+        // Очистка состояния
+        delete(b.UserStates, userID)
+        delete(b.TempData[userID], "create_match_team1")
+        delete(b.TempData[userID], "create_match_team2")
+        delete(b.TempData[userID], "create_match_date")
+        delete(b.TempData[userID], "create_match_location")
+  case "create_stat_team1score":
+        if _, err := strconv.Atoi(msg.Text); err != nil {
+            b.sendMessage(chatID, "Неверный формат счета. Введите число:")
+            return
+        }
+        b.TempData[userID]["create_stat_team1score"] = msg.Text
+        // Получаем название второй команды из матча
+        mID, _ := strconv.Atoi(b.TempData[userID]["create_stat_match"])
+        match := b.Handlers.MatchHandler.GetMatchByID(mID)
+        if match == nil {
+            b.sendMessage(chatID, "Матч не найден")
+            delete(b.UserStates, userID)
+            return
+        }
+        b.UserStates[userID] = "create_stat_team2score"
+        b.sendMessage(chatID, fmt.Sprintf("Введите счет для команды %s:", match.Team2.Name))
+  case "create_stat_team2score":
+        if _, err := strconv.Atoi(msg.Text); err != nil {
+            b.sendMessage(chatID, "Неверный формат счета. Введите число:")
+            return
+        }
+        b.TempData[userID]["create_stat_team2score"] = msg.Text
+        matchID, _ := strconv.Atoi(b.TempData[userID]["create_stat_match"])
+        team1ID, _ := strconv.Atoi(b.TempData[userID]["create_stat_team1"])
+        team2ID, _ := strconv.Atoi(b.TempData[userID]["create_stat_team2"])
+        team1Score, _ := strconv.Atoi(b.TempData[userID]["create_stat_team1score"])
+        team2Score, _ := strconv.Atoi(b.TempData[userID]["create_stat_team2score"])
+        stat, err := b.Handlers.MatchHandler.CreateMatchStatistics(uint(matchID), uint(team1ID), uint(team2ID), team1Score, team2Score)
+        if err != nil {
+            b.sendMessage(chatID, fmt.Sprintf("Ошибка создания статистики: %v", err))
+        } else {
+            b.sendMessage(chatID, fmt.Sprintf("Статистика успешно создана для матча #%d", stat.ID))
+        }
+        // Очистка состояния
+        delete(b.UserStates, userID)
+        delete(b.TempData[userID], "create_stat_match")
+        delete(b.TempData[userID], "create_stat_team1")
+        delete(b.TempData[userID], "create_stat_team2")
+        delete(b.TempData[userID], "create_stat_team1score")
+        delete(b.TempData[userID], "create_stat_team2score")
 	default:
 		// Если состояние неизвестно, сбрасываем его и обрабатываем сообщение как команду.
 		delete(b.UserStates, msg.From.ID)
@@ -183,38 +253,13 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 			b.processPlayerRemoval(chatID, userID, teams[0].ID, number)
 		}
 	case "/create_match":
-		if !b.isAdmin(chatID) {
-			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
-			return
-		}
-		if len(parts) < 2 {
-			b.sendMessage(chatID, "Используйте: /create_match <Team1ID> <Team2ID> <Date> <Location>")
-			return
-		}
-		args := strings.Fields(parts[1])
-		if len(args) < 4 {
-			b.sendMessage(chatID, "Недостаточно данных. Используйте: /create_match <Team1ID> <Team2ID> <Date> <Location>")
-			return
-		}
-		team1ID, _ := strconv.Atoi(args[0])
-		team2ID, _ := strconv.Atoi(args[1])
-		// Используем формат даты "2006-01-02 15:04:05"
-		const layout = "2006-01-02 15:04:05"
-		date, err := time.Parse(layout, args[2]+" "+args[3])
-		if err != nil {
-			b.sendMessage(chatID, "Ошибка разбора даты: "+err.Error())
-			return
-		}
-		location := ""
-		if len(args) >= 5 {
-			location = args[4]
-		}
-		match, err := b.Handlers.MatchHandler.CreateMatch(uint(team1ID), uint(team2ID), date, location)
-		if err != nil {
-			b.sendMessage(chatID, "Ошибка создания матча: "+err.Error())
-			return
-		}
-		b.sendMessage(chatID, fmt.Sprintf("Матч создан: #%d", match.ID))
+    if !b.isAdmin(chatID) {
+        b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+        return
+    }
+    // Запускаем интерактивное создание матча:
+    b.UserStates[userID] = "create_match_team1"
+    b.sendTeamSelectionForMatchCreation(chatID, "Выберите первую команду:", "create_match:team1:")
 	case "/get_match":
 		if !b.isAdmin(chatID) {
 			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
@@ -255,50 +300,13 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 		}
 		b.sendMessage(chatID, fmt.Sprintf("Матч #%d успешно удален.", matchID))
 	case "/create_stat":
-		if !b.isAdmin(chatID) {
-			b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
-			return
-		}
-		if len(parts) < 2 {
-			b.sendMessage(chatID, "Используйте: /create_stat <MatchID> <TeamID1> <TeamID2> <Team1Score> <Team2Score>")
-			return
-		}
-		data := strings.Fields(parts[1])
-		if len(data) != 5 {
-			b.sendMessage(chatID, "Неверное количество параметров. Используйте: /create_stat <MatchID> <TeamID1> <TeamID2> <Team1Score> <Team2Score>")
-			return
-		}
-		matchID, err := strconv.ParseUint(data[0], 10, 32)
-		if err != nil {
-			b.sendMessage(chatID, "MatchID должен быть числом.")
-			return
-		}
-		teamID1, err := strconv.ParseUint(data[1], 10, 32)
-		if err != nil {
-			b.sendMessage(chatID, "TeamID1 должен быть числом.")
-			return
-		}
-		teamID2, err := strconv.ParseUint(data[2], 10, 32)
-		if err != nil {
-			b.sendMessage(chatID, "TeamID2 должен быть числом.")
-			return
-		}
-		team1Score, err := strconv.Atoi(data[3])
-		if err != nil {
-			b.sendMessage(chatID, "Team1Score должен быть числом.")
-			return
-		}
-		team2Score, err := strconv.Atoi(data[4])
-		if err != nil {
-			b.sendMessage(chatID, "Team2Score должен быть числом.")
-			return
-		}
-		stat, err := b.Handlers.MatchHandler.CreateMatchStatistics(uint(matchID), uint(teamID1), uint(teamID2), team1Score, team2Score)
-		if err != nil {
-			b.sendMessage(chatID, fmt.Sprintf("Ошибка создания статистики: %v", err))
-			return
-		}
-		b.sendMessage(chatID, fmt.Sprintf("Статистика успешно создана для матча #%d", stat.ID))
+    if !b.isAdmin(chatID) {
+        b.sendMessage(chatID, "У вас нет прав для выполнения этой команды.")
+        return
+    }
+    // Запускаем интерактивное создание статистики:
+    b.UserStates[userID] = "create_stat_match"
+    b.sendMatchSelectionForStat(chatID, "Выберите матч для создания статистики:", "create_stat:match:")
 	case "/get_stat":
 		if len(parts) < 2 {
 			b.sendMessage(chatID, "Используйте: /get_stat <MatchID>")
@@ -377,6 +385,44 @@ func (b *Bot) processCommand(msg *tgbotapi.Message) {
 	}
 }
 
+// Отправка клавиатуры для выбора команды при создании матча.
+func (b *Bot) sendTeamSelectionForMatchCreation(chatID int64, text, callbackPrefix string) {
+    var teams []models.Team
+    if err := b.DB.Find(&teams).Error; err != nil {
+        b.sendMessage(chatID, "Ошибка получения списка команд")
+        return
+    }
+    var buttons []tgbotapi.InlineKeyboardButton
+    for _, team := range teams {
+        data := fmt.Sprintf("%s%d", callbackPrefix, team.ID)
+        buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(team.Name, data))
+    }
+    markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
+    msg := tgbotapi.NewMessage(chatID, text)
+    msg.ReplyMarkup = markup
+    b.API.Send(msg)
+}
+
+// Отправка клавиатуры для выбора матча при создании статистики.
+func (b *Bot) sendMatchSelectionForStat(chatID int64, text, callbackPrefix string) {
+    var matches []models.Match
+    // Подгружаем данные о командах для отображения названий
+    if err := b.DB.Preload("Team1").Preload("Team2").Find(&matches).Error; err != nil {
+        b.sendMessage(chatID, "Ошибка получения списка матчей")
+        return
+    }
+    var buttons []tgbotapi.InlineKeyboardButton
+    for _, match := range matches {
+        label := fmt.Sprintf("#%d: %s vs %s", match.ID, match.Team1.Name, match.Team2.Name)
+        data := fmt.Sprintf("%s%d", callbackPrefix, match.ID)
+        buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData(label, data))
+    }
+    markup := tgbotapi.NewInlineKeyboardMarkup(tgbotapi.NewInlineKeyboardRow(buttons...))
+    msg := tgbotapi.NewMessage(chatID, text)
+    msg.ReplyMarkup = markup
+    b.API.Send(msg)
+}
+
 // sendTeamSelectionMenu выводит меню выбора команды для удаления игрока.
 func (b *Bot) sendTeamSelectionMenu(chatID int64, teams []models.Team, number uint8) {
 	var buttons []tgbotapi.InlineKeyboardButton
@@ -417,6 +463,10 @@ func (b *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	switch {
 	case strings.HasPrefix(data, "set_team_photo:"):
 		b.handleSetTeamPhotoCallback(query)
+  case strings.HasPrefix(data, "create_match:"):
+    b.handleCreateMatchCallback(query)
+  case strings.HasPrefix(data, "create_stat:"):
+    b.handleCreateStatCallback(query)
 	case strings.HasPrefix(data, "confirm_remove:"):
 		b.processConfirmation(query, chatID, userID, data)
 	case strings.HasPrefix(data, "execute_remove:"):
@@ -424,6 +474,73 @@ func (b *Bot) handleCallbackQuery(query *tgbotapi.CallbackQuery) {
 	case data == "cancel_remove":
 		b.cancelRemoval(query, chatID)
 	}
+}
+
+// Обработка выбора команды при создании матча
+func (b *Bot) handleCreateMatchCallback(query *tgbotapi.CallbackQuery) {
+    chatID := query.Message.Chat.ID
+    userID := query.From.ID
+    parts := strings.Split(query.Data, ":") // Формат: "create_match:teamX:<ID>"
+    if len(parts) < 3 {
+        b.sendMessage(chatID, "Неверные данные для создания матча")
+        return
+    }
+    step := parts[1] // "team1" или "team2"
+    teamID := parts[2]
+    if step == "team1" {
+        if b.TempData[userID] == nil {
+            b.TempData[userID] = make(map[string]string)
+        }
+        b.TempData[userID]["create_match_team1"] = teamID
+        b.UserStates[userID] = "create_match_team2"
+        b.sendTeamSelectionForMatchCreation(chatID, "Выберите вторую команду:", "create_match:team2:")
+    } else if step == "team2" {
+        if b.TempData[userID] == nil {
+            b.TempData[userID] = make(map[string]string)
+        }
+        b.TempData[userID]["create_match_team2"] = teamID
+        b.UserStates[userID] = "create_match_date"
+        b.sendMessage(chatID, "Введите дату матча в формате YYYY-MM-DD HH:MM:SS:")
+    }
+    callbackCfg := tgbotapi.NewCallback(query.ID, "Команда выбрана")
+    b.API.Request(callbackCfg)
+}
+
+// Обработка выбора матча при создании статистики
+func (b *Bot) handleCreateStatCallback(query *tgbotapi.CallbackQuery) {
+    chatID := query.Message.Chat.ID
+    userID := query.From.ID
+    parts := strings.Split(query.Data, ":") // Формат: "create_stat:match:<ID>"
+    if len(parts) < 3 {
+        b.sendMessage(chatID, "Неверные данные для создания статистики")
+        return
+    }
+    matchID := parts[2]
+    if b.TempData[userID] == nil {
+        b.TempData[userID] = make(map[string]string)
+    }
+    b.TempData[userID]["create_stat_match"] = matchID
+
+    // Получаем данные матча, чтобы подставить команды
+    mID, err := strconv.Atoi(matchID)
+    if err != nil {
+        b.sendMessage(chatID, "Неверный формат matchID")
+        return
+    }
+    match := b.Handlers.MatchHandler.GetMatchByID(mID)
+    if match == nil {
+        b.sendMessage(chatID, "Матч не найден")
+        return
+    }
+    // Сохраняем ID команд из матча
+    b.TempData[userID]["create_stat_team1"] = fmt.Sprintf("%d", match.Team1.ID)
+    b.TempData[userID]["create_stat_team2"] = fmt.Sprintf("%d", match.Team2.ID)
+    // Переходим к вводу счета для первой команды
+    b.UserStates[userID] = "create_stat_team1score"
+    b.sendMessage(chatID, fmt.Sprintf("Введите счет для команды %s:", match.Team1.Name))
+    
+    callbackCfg := tgbotapi.NewCallback(query.ID, "Матч выбран")
+    b.API.Request(callbackCfg)
 }
 
 // handleSetTeamPhotoCallback обрабатывает выбор команды для установки фото.
@@ -574,7 +691,7 @@ func (b *Bot) processTeamPhoto(msg *tgbotapi.Message) {
 
     // Успешно
     if err := b.Handlers.TeamHandler.UpdateLogoPath(team.ID, b.getTeamLogoLink(team.Name)); err != nil {
-      b.sendMessage(chatID, fmt.Sprintf("Произошла ошибка, попробуйте позже"))
+      b.sendMessage(chatID, "Произошла ошибка, попробуйте позже")
     } else {
       b.sendMessage(chatID, fmt.Sprintf("Фото команды «%s» успешно загружено!", team.Name))
     }

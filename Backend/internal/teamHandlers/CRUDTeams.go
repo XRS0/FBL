@@ -16,6 +16,12 @@ type Handler struct {
 	models.Handler
 }
 
+func (h *Handler) GetAllTeams() []models.Team {
+    var teams []models.Team
+    h.DB.Find(&teams)
+    return teams
+}
+
 // ----------------------------------------------------------------------------
 // Вспомогательная функция для отправки текста
 // ----------------------------------------------------------------------------

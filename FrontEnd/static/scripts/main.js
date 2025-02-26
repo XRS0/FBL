@@ -120,7 +120,7 @@ function updateStatisticsContainer(statistics) {
     statistics.forEach((team, index) => {
         if (index === 4) {
             statisticsGrid.appendChild(playOffElement);
-            return;
+            //return;
         }
 
         const teamRow = document.createElement("div");
@@ -140,7 +140,6 @@ function updateStatisticsContainer(statistics) {
                 teamRow.style.border= "1px solid #343434";
                 break;
         }
-        console.log(team)
         teamRow.innerHTML = `
             <div class="team-info">
                 <div class="match-team-name" style='margin-right: 1vw;'>
@@ -167,5 +166,4 @@ function updateStatisticsContainer(statistics) {
 // Загружаем данные при загрузке страницы
 document.addEventListener("DOMContentLoaded", () => {
     fetchTeams();
-    fetchMatches();
 });

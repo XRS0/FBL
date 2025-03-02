@@ -9,13 +9,22 @@
 }
 
 @media (max-width: 1510px) {
-    .teams-grid-block {
-        gap: 40px 50px;
+    .header-text {
+        width: 74%;
+    }
 
+    .match-widget {
+        max-height: fit-content;
+    }
+    .team-widget {
+        width: 48%;
+        margin-bottom: 4%;
     }
     .players-grid {
-        gap: 15px;
-        margin: 20px;
+        gap: 25px 2%;
+        margin: 0;
+        padding: 20px;
+        grid-template-columns: 32% 32% 32%;
     }
 
     .player-name {
@@ -31,7 +40,11 @@
     }
 
     .player-card img {
-        width: 90%;
+        width: 80%;
+    }
+
+    .player-number {
+        top: 50%
     }
 
     #rules-popup {
@@ -40,8 +53,12 @@
 }
 
 @media (max-width: 1400px) {
-    .teams-grid-block {
-        gap: 40px 4vw;
+    .teams-block {
+        margin-inline: 5%;
+    }
+    .team-widget {
+        width: 47%;
+        margin-bottom: 5%;
     }
     .players-grid {
         width: 90%;
@@ -52,6 +69,10 @@
 
     .team-name {
         font-size: 2.5vw;
+    }
+
+    .player-number {
+        top: 7.6vw;
     }
 }
 
@@ -125,7 +146,7 @@
         font-size: 85%;
     }
     .match-widget {
-        padding: 1.7% 2.5%;
+        padding: 1.8% 2.5%;
         align-items: center;
     }
     .match-widget img {
@@ -177,9 +198,22 @@
     }
 
     .match-team-name {
-        height: 100%;
         min-height: auto;
         background-size: contain;
+        max-height: 115px;
+    }
+
+    .match-team-name:has( > img) {
+        height: 9.7vw;
+    }
+    .team-info .match-team-name:has( > img) {
+        height: 100%;
+    }
+    .match-team-name img {
+        height: 100%;
+    }
+    .team-info .match-team-name {
+        font-size: 1.5vw;
     }
 }
 
@@ -219,7 +253,20 @@
         margin: 2.6vw 0;
     }
     .fillness-button {
-        padding: 1vh 3vw;
+        padding: 1.5vh 3.5vw;
+        font-size: 2.5vw;
+    }
+
+    .match-team-name {
+        max-height: 100px;
+    }
+
+    .match-status {
+        font-size: 97%;
+    }
+
+    .player-number {
+        font-size: 3vw;
     }
 
     .statistics-block {
@@ -251,18 +298,6 @@
         width: 50px;
     }
 
-    .match-widget img {
-        height: 70%;
-        aspect-ratio: 1 / 1;
-    }
-    .match-status {
-        font-size: 97%;
-    }
-
-    .teams-grid-block {
-        padding: 5% 0;
-    }
-
     .social-tg {
         width: 7vw !important;
     }
@@ -291,8 +326,10 @@
         padding: 0 15%;
     }
     .match-widget img {
-        height: 94%;
-        aspect-ratio: 1 / 1;
+        height: 100%;
+    }
+    .match-team-name:has( > img) {
+        height: 12vw;
     }
     .match-time {
         font-size: 2.8vw;
@@ -313,6 +350,10 @@
         min-height: 5vw;
         background-size: contain;
         background-repeat: no-repeat;
+    }
+
+    .team-info .match-team-name:has( > img) {
+        height: 4vw;
     }
 }
 
@@ -426,6 +467,10 @@
         margin: 5% 0;
     }
 
+    .team-info .match-team-name:has( > img) {
+        height: 5vw;
+    }
+
     .play-off-line .separation-line {
         margin-inline: 2%;
     }
@@ -457,28 +502,29 @@
         padding-right: 2.3vw;
         margin-bottom: 0;
     }
-    .teams-grid-block {
-        grid-template-columns: 1fr;
+    .team-widget {
+        width: 86%;
+        float: left !important;
+        margin-inline: 7%;
+        margin-bottom: 8%;
+    }
+    .player-number {
+        font-size: 32px;
+        top: 12vw;
     }
     .team-name {
         font-size: 4vw;
     }
     .players-grid {
         grid-template-columns: 1fr 1fr 1fr;
-    }
-    .players-grid {
-        gap: 20px;
-        margin: 5%;
-        /* justify-items: center; */
+        margin: 0;
+        width: 100%;
     }
     .player-name {
         padding: 5% 0;
     }
     .team-header img {
         width: 60px;
-    }
-    .player-card {
-        width: 90%;
     }
     .player-card img {
         width: 90%;
@@ -504,6 +550,9 @@
     .no-matches {
         font-size: 4vw;
     }
+    footer {
+        background-size: 350%;
+    }
 }
 
 @media (max-width: 600px) {
@@ -515,9 +564,8 @@
         padding: 0.5% 2%;
     }
 
-    .match-widget img {
-        height: 75%;
-        aspect-ratio: 1 / 1;
+    .match-team-name:has( > img) {
+        height: 15vw;
     }
 
     .match-time {
@@ -532,8 +580,16 @@
         font-size: 97%;
     }
 
+    .statistics {
+        font-size: 14px;
+    }
+    .table-cell {
+        min-height: 42px;
+    }
+
     .team-widget {
-        max-width: 370px;
+        width: 96%;
+        margin-inline: 2%;
         border-radius: 15px;
     }
     .team-header {
@@ -541,20 +597,29 @@
         padding: 5px 10px;
     }
     .team-header img {
-        width: 42px;
+        width: 45px;
         margin-right: 12px;
     }
     .team-name {
-        font-size: 19px;
+        font-size: 23px;
+    }
+    .player-number {
+        font-size: 24px;
+        top: 12vw;
     }
     .players-grid {
-        gap: 20px 15px;
-        margin: 15px;
-        justify-items: center;
+        gap: 25px;
     }
     .player-card {
         border-radius: 10px;
-        width: 95px;
+        width: 98%;
+    }
+    .player-card img {
+        width: 80%;
+        margin-top: 5%;
+    }
+    .player-name {
+        font-size: 13px;
     }
     .change-border {
         outline: 2px solid var(--main-blue);
@@ -728,6 +793,7 @@
     }
     .hide-team-name {
         display: block;
+        margin-left: 5px;
     }
 
     .play-off-line .title {
@@ -748,7 +814,7 @@
         padding: 5px 10px;
     }
     .team-info img {
-        width: 30px;
+        width: 38px;
     }
 
     .centered-names-mobile {
@@ -760,6 +826,37 @@
     }
     .centered-names {
         display: none;
+    }
+
+    .teams-block {
+        padding-top: 22px;
+        margin-inline: 3vw;
+    }
+    .team-widget {
+        width: 100%;
+        margin: 0;
+        margin-bottom: 10%;
+    }
+    .team-header {
+        padding-block: 6px;
+    }
+    .team-name {
+        font-size: 20px;
+    }
+    .players-grid {
+        padding: 15px;
+        gap: 20px;
+    }
+    .player-card {
+        width: 90px;
+    }
+    .player-number {
+        font-size: 20px;
+        top: 48px;
+    }
+    .player-name {
+        font-size: 10px;
+        font-weight: 500;
     }
 
     .team-info div {
@@ -805,6 +902,6 @@
 
     .match-team-name {
         height: 100%;
-        font-size: 5vw;
+        font-size: 4.7vw;
     }
 }

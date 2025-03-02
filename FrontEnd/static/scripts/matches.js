@@ -1,4 +1,4 @@
-const MATCHES_API = "http://77.239.124.241:8080/matches";
+const MATCHES_API = "http://77.239.124.241:8080/matches";   // probably needs to change
 
 // Функция для загрузки и отображения матчей
 async function fetchMatches() {
@@ -93,7 +93,7 @@ function wrapMatches(container, date, location) {
     </div>
 
     ${document.title === "Fast Break League" ?
-      `<div class="teams-block" style="margin-bottom: 50px;">
+      `<div class="matches-block" style="margin-bottom: 50px;">
           <div class="fillness-button" onclick="window.open('./matches.html', '_self')">Больше матчей</div>
       </div>` : ""
     }

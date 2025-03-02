@@ -107,22 +107,32 @@ function closeRules() {
 // Функция для загрузки и отображения статистики
 async function fetchTeams() {
     try {
-        const response = await fetch("https://07np62-94-140-138-199.ru.tuna.am/teams_data", {
+        const response = await fetch(TEAMS_API, {
         method: "GET",
-        mode: "no-cors"
+        mode: "cors"
     });
         if (!response.ok) {
             throw new Error(`Ошибка HTTP: ${response.status}`);
         }
 
-        const statistics = await response.json();
-        statistics.sort((a, b) => b.points - a.points);
+        const teams = await response.json();
+        teams.sort((a, b) => b.points - a.points);
 
-        TEAMS = statistics;
+        TEAMS = teams;
 
-        updateStatisticsContainer(TEAMS);
+        updateStatisticsContainer(statistics.concat(TEAMS));
         
-        if (document.title === "Fast Break League") updateTeamsContainer(TEAMS.slice(0, 2));
+        
+        if (document.title === "Fast Break League") {
+            let previewTeams = [];
+
+            TEAMS.forEach(team => {
+                if (previewTeams.length >= 2) return;
+                if (team.players.length < 10) previewTeams.push(team);
+            });
+            
+            updateTeamsContainer(previewTeams);
+        }
         else updateTeamsContainer(TEAMS);
     } catch (error) {
         console.error("Can't response data from TEAMS-API:", error);
@@ -171,7 +181,7 @@ function updateStatisticsContainer(statistics) {
                 <div class="match-team-name" style='margin-right: 1vw;'>
                     ${TEAMS.find(el => el.name === team.name)
                         ? `<img src=${TEAMS.find(el => el.name === team.name).logo}>`
-                        : getShortName(team.name)
+                        : minimizeTeamName(team.name)
                     }
                 </div>
                 <div>${minimizeTeamName(team.name)}</div>

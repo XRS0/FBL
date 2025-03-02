@@ -26,25 +26,29 @@ function formatDateTime(timestamp) {
   return { date: formattedDate, time: formattedTime };
 }
 
-function getShortName(name) {
-  if (name.split(" ").length == 1) return name.slice(0, 2);
-  let [fWord, sWord] = name.split(" ");
-  return (fWord[0] + sWord[0]).toUpperCase();
-}
-
 function goToBot() {
   var url = "https://t.me/BFBLB_bot"; 
   var windowName = "_blank"; 
   var windowFeatures = "width=800,height=600"; 
-
+  
   window.open(url, windowName, windowFeatures);
 }
 
+function getShortName(name) {
+  if (name.split(" ").length == 1) return name.slice(0, 2);
+  let [fWord, sWord, tWord = " "] = name.split(" ");
+  return (fWord[0] + sWord[0] + tWord[0]).toUpperCase();
+}
+
 function minimizeTeamName(name) {
-  if (name.length > 16) {
-      let minimized = name.split(" ")
+  if (name.length > 14) {
+      let minimized = name.split(" ");
       return minimized.map(i => i[0]).join("");
   } else return name;
+}
+
+function minimizeLastName(name) {
+  return `${name.split(" ")[0]} ${name.split(" ")[1][0]}.`
 }
 
 document.querySelectorAll(".social-tg").forEach(function(element) {

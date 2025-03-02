@@ -1,5 +1,5 @@
 const TEAMS = [
-  {
+  /*{
     logo: "https://distribution.faceit-cdn.net/images/5cd305e8-704c-4dfc-a029-20f0167f393a.jpeg",
     name: "Что за Свага",
   
@@ -66,10 +66,55 @@ const TEAMS = [
         name: "Ronaldo",
         avatar: "link to img or xz",
         number: "7"
+      },{
+        name: "Ser natural",
+        avatar: "link to img or xz",
+        number: "42"
+      },{
+        name: "Maxim P",
+        avatar: "link to img or xz",
+        number: "0"
+      },{
+        name: "Kazakh Z",
+        avatar: "link to img or xz",
+        number: "22"
+      },{
+        name: "Danil Maximov",
+        avatar: "link to img or xz",
+        number: "67"
+      }
+    ],
+    captain: "как будет удобно, можно просто имя игрока"
+  },{
+    logo: "https://distribution.faceit-cdn.net/images/5cd305e8-704c-4dfc-a029-20f0167f393a.jpeg",
+    name: "Beautiful Landscapes",
+  
+    games: 2,
+    wins: 0,
+    loses: 3,
+    points: 5,
+  
+    players: [
+      {
+        name: "Gojo Satoru",
+        avatar: "link to img or xz",
+        number: "1"
+      },{
+        name: "Sergey Kriv",
+        avatar: "link to img or xz",
+        number: "13"
+      },{
+        name: "Bomboclac",
+        avatar: "link to img or xz",
+        number: "52"
+      },{
+        name: "Demxn Slayer",
+        avatar: "link to img or xz",
+        number: "78"
       },
     ],
     captain: "как будет удобно, можно просто имя игрока"
-  }
+  }*/
 ]; // тут хранятся полученные с бекенда команды
 
 const PlayersPictures = [   // тут хранятся картинки игроков
